@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../hooks/useAuth';
 import { nomePorEmail } from '../../utils/texto';
+import './Navbar.css';
 
 function Navbar({ onMenu }) {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ function Navbar({ onMenu }) {
         <button className="topbar__menu" type="button" onClick={onMenu} aria-label="Abrir menu">
           <FiMenu />
         </button>
-        <img src="/Logo_Pedrasplast.png" alt="Pedrasplast" className="topbar__logo" />
+        <img className='logo' src="/Logo_Pedrasplast.png" alt="Pedrasplast" />
       </div>
 
       <div className="topbar__right">

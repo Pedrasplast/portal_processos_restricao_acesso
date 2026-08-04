@@ -1,6 +1,7 @@
 .repository-filters {
   margin-bottom: 22px;
   padding: 12px;
+
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -9,10 +10,13 @@
 .repository-chip {
   min-height: 34px;
   padding: 0 12px;
+
   color: #475569;
   background: #f8fafc;
+
   border: 1px solid #dbe3ec;
   border-radius: 8px;
+
   font-size: 0.7rem;
   font-weight: 750;
   white-space: nowrap;
@@ -26,56 +30,89 @@
 
 .repository-chip.active {
   color: #fff;
-  background: linear-gradient(135deg, #0284c7, #0369a1);
+  background:
+    linear-gradient(
+      135deg,
+      #0284c7,
+      #0369a1
+    );
+
   border-color: #0284c7;
-  box-shadow: 0 5px 14px rgba(2, 132, 199, 0.2);
+
+  box-shadow:
+    0 5px 14px rgba(2, 132, 199, 0.2);
 }
 
 .repository-error {
   margin-bottom: 16px;
   padding: 12px 14px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+
   color: #991b1b;
   background: #fff1f2;
+
   border: 1px solid #fecdd3;
   border-radius: 9px;
+
   font-size: 0.82rem;
 }
 
 .repository-error button {
   padding: 6px 10px;
+
   color: #991b1b;
   background: #fff;
+
   border: 1px solid #fda4af;
   border-radius: 7px;
 }
 
+/* =====================================================
+   TABELA
+===================================================== */
+
 .repository-table-wrapper {
   width: 100%;
+
   overflow-x: auto;
+
   background: #fff;
+
   border: 1px solid #dbe4ee;
   border-radius: 14px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.055);
+
+  box-shadow:
+    0 12px 32px rgba(15, 23, 42, 0.055);
 }
 
 .repository-table {
   width: 100%;
   min-width: 920px;
+
   border-collapse: separate;
   border-spacing: 0;
+
   table-layout: fixed;
 }
 
 .repository-table th {
   padding: 14px 16px;
+
   color: #1e293b;
-  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+  background:
+    linear-gradient(
+      180deg,
+      #f8fafc,
+      #f1f5f9
+    );
+
   border-right: 1px solid #e2e8f0;
   border-bottom: 1px solid #cbd5e1;
+
   font-size: 0.72rem;
   font-weight: 850;
   text-align: left;
@@ -98,71 +135,76 @@
 
 .repository-col-download {
   width: 400px;
+
   text-align: center !important;
 }
 
-.repository-table tbody tr:nth-child(odd) > td {
+.repository-table tbody
+  tr:nth-child(odd) > td {
   background: #fff;
 }
 
-.repository-table tbody tr:nth-child(even) > td {
+.repository-table tbody
+  tr:nth-child(even) > td {
   background: #e8f0f7;
 }
 
-.repository-table tbody tr:hover > td {
+.repository-table tbody
+  tr:hover > td {
   background: #d8ecfa;
 }
 
 .repository-table td {
   min-height: 66px;
   padding: 14px 16px;
+
   border-right: 1px solid #e8eef5;
   border-bottom: 1px solid #d8e1ea;
+
   vertical-align: middle;
+
   transition: background 150ms ease;
 }
 
-.repository-table tbody tr:last-child td {
+.repository-table tbody
+  tr:last-child td {
   border-bottom: 0;
 }
 
-.repository-descriptions {
-  display: grid;
-  gap: 5px;
-}
+/* =====================================================
+   DESCRIÇÃO ÚNICA
+===================================================== */
 
 .repository-description {
-  min-height: 28px;
+  min-width: 0;
+
   display: grid;
-  grid-template-columns: 22px 92px minmax(0, 1fr);
+  grid-template-columns:
+    24px
+    minmax(0, 1fr);
+
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+
   color: #1e293b;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
-.repository-description + .repository-description {
-  margin-top: 2px;
-  border-top: 0;
+.repository-description span {
+  min-width: 0;
+
+  overflow-wrap: anywhere;
 }
 
 .repository-icon {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
+
   justify-self: center;
-}
 
-.repository-icon--pop { color: #2563eb; }
-.repository-icon--fluxograma { color: #0891b2; }
-.repository-icon--mapa-visual { color: #7c3aed; }
-
-.repository-prefix {
-  color: #0369a1;
-  font-size: 0.68rem;
-  font-weight: 850;
-  text-transform: uppercase;
-  white-space: nowrap;
+  color: #2563eb;
 }
 
 .repository-sector {
@@ -171,10 +213,16 @@
   font-weight: 700;
 }
 
+/* =====================================================
+   DOWNLOADS
+===================================================== */
+
 .repository-download {
   width: 133px;
+
   padding-right: 8px !important;
   padding-left: 8px !important;
+
   text-align: center;
 }
 
@@ -182,10 +230,13 @@
   min-width: 88px;
   min-height: 34px;
   padding: 7px 9px;
+
   color: #0369a1;
   background: #f0f9ff;
+
   border: 1px solid #bae6fd;
   border-radius: 8px;
+
   font-size: 0.73rem;
   font-weight: 750;
 }
@@ -196,33 +247,52 @@
   border-color: #0284c7;
 }
 
+.repository-download-button:disabled {
+  opacity: 0.65;
+}
+
 .repository-missing {
   color: #94a3b8;
 }
 
 .repository-empty {
   padding: 42px 18px !important;
+
   color: #64748b;
   text-align: center !important;
 }
 
+/* =====================================================
+   RESPONSIVIDADE
+===================================================== */
+
 @media (max-width: 900px) {
   .repository-filters {
     flex-wrap: nowrap;
+
     overflow-x: auto;
   }
 }
 
-@media (max-width: 768px) {
-  .repository-description {
-    grid-template-columns: 18px minmax(0, 1fr);
-    grid-template-areas:
-      "icon prefix"
-      "icon text";
-    gap: 2px 7px;
+@media (max-width: 700px) {
+  .repository-error {
+    align-items: stretch;
+    flex-direction: column;
   }
 
-  .repository-icon { grid-area: icon; margin-top: 2px; align-self: start; }
-  .repository-prefix { grid-area: prefix; }
-  .repository-description > span:last-child { grid-area: text; }
+  .repository-error button {
+    width: 100%;
+  }
+
+  .repository-table {
+    min-width: 820px;
+  }
+
+  .repository-description {
+    grid-template-columns:
+      20px
+      minmax(0, 1fr);
+
+    font-size: 0.78rem;
+  }
 }

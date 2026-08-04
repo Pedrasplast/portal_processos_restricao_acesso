@@ -2,6 +2,7 @@ import { FiFolder, FiHome, FiSettings, FiX } from 'react-icons/fi';
 import { NavLink } from 'react-router-dom';
 
 import { useAuth } from '../../hooks/useAuth';
+import './Sidebar.css';
 
 function Sidebar({ open, onClose }) {
   const { isAdmin } = useAuth();
@@ -14,7 +15,7 @@ function Sidebar({ open, onClose }) {
 
       <aside className={`sidebar${open ? ' open' : ''}`}>
         <div className="sidebar__brand">
-          <img src="/Logo_Pedrasplast.png" alt="Pedrasplast" className="sidebar__logo" />
+          <h2 className="sidebar_pedras">Pedrasplast</h2>
           <button type="button" className="sidebar__close" onClick={onClose} aria-label="Fechar menu">
             <FiX />
           </button>

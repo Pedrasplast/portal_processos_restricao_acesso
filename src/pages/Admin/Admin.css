@@ -1,22 +1,28 @@
 .admin-tabs {
   margin-bottom: 18px;
   padding-bottom: 10px;
+
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+
   border-bottom: 1px solid #e2e8f0;
 }
 
 .admin-tab {
   min-height: 38px;
   padding: 8px 13px;
+
   display: inline-flex;
   align-items: center;
   gap: 7px;
+
   color: #475569;
   background: #fff;
+
   border: 1px solid #cbd5e1;
   border-radius: 8px;
+
   font-size: 0.78rem;
   font-weight: 750;
 }
@@ -31,12 +37,16 @@
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
   color: #fff;
   background: #dc2626;
+
   border-radius: 999px;
+
   font-size: 0.68rem;
 }
 
@@ -47,10 +57,14 @@
 
 .admin-card {
   padding: 20px;
+
   background: #fff;
+
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
+
+  box-shadow:
+    0 8px 28px rgba(15, 23, 42, 0.05);
 }
 
 .admin-card__header {
@@ -66,23 +80,33 @@
 
 .admin-card__header h3 {
   margin: 0;
+
   display: flex;
   align-items: center;
   gap: 7px;
+
   color: #1e293b;
   font-size: 1rem;
 }
 
 .admin-card__header p {
   margin: 6px 0 0;
+
   color: #64748b;
   font-size: 0.8rem;
 }
 
+/* =====================================================
+   FORMULÁRIO DE DOCUMENTOS
+===================================================== */
+
 .admin-form-grid {
   margin-bottom: 16px;
+
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
   gap: 14px;
 }
 
@@ -90,23 +114,44 @@
   grid-column: 1 / -1;
 }
 
+.admin-form-grid__double {
+  grid-column: span 2;
+}
+
+.document-number-control {
+  color: #0369a1;
+  background: #f0f9ff;
+
+  font-weight: 850;
+  text-align: center;
+}
+
 .document-title-control {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns:
+    auto
+    minmax(0, 1fr);
+
   align-items: stretch;
 }
 
 .document-title-control > span {
+  min-width: 58px;
   padding: 0 11px;
+
   display: flex;
   align-items: center;
+  justify-content: center;
+
   color: #0369a1;
   background: #f0f9ff;
+
   border: 1px solid #cbd5e1;
   border-right: 0;
   border-radius: 8px 0 0 8px;
+
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 850;
   white-space: nowrap;
 }
 
@@ -114,37 +159,136 @@
   border-radius: 0 8px 8px 0;
 }
 
+.document-title-control
+  .form-control:disabled {
+  color: #334155;
+  background: #f8fafc;
+  opacity: 1;
+}
+
+.document-form-help {
+  display: block;
+
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+/* =====================================================
+   TABELA AGRUPADA DE DOCUMENTOS
+===================================================== */
+
+.documents-grouped-table {
+  min-width: 980px;
+}
+
+.documents-grouped-table th:first-child {
+  width: 34%;
+}
+
+.documents-grouped-table th:nth-child(2) {
+  width: 16%;
+}
+
+.documents-grouped-table th:nth-child(n + 3) {
+  width: 16.66%;
+  text-align: center;
+}
+
 .document-cell {
   display: flex;
   align-items: center;
   gap: 8px;
+
+  min-width: 0;
 }
 
 .document-cell svg {
   flex: 0 0 auto;
+
   color: #2563eb;
 }
+
+.document-cell span {
+  overflow-wrap: anywhere;
+
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.document-type-cell {
+  text-align: center;
+}
+
+.document-type-actions {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+}
+
+.document-type-badge {
+  min-width: 80px;
+  padding: 5px 8px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #166534;
+  background: #dcfce7;
+
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+
+  font-size: 0.66rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.document-delete-button {
+  min-height: 32px;
+  padding: 6px 9px;
+
+  font-size: 0.7rem;
+}
+
+.document-type-missing {
+  color: #94a3b8;
+  font-weight: 800;
+}
+
+/* =====================================================
+   MODAIS
+===================================================== */
 
 .modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 2000;
+
   padding: 20px;
+
   display: grid;
   place-items: center;
+
   background: rgba(15, 23, 42, 0.55);
 }
 
 .modal-card {
   width: min(430px, 100%);
   padding: 22px;
+
   background: #fff;
+
   border-radius: 14px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.25);
 }
 
 .modal-card h3 {
   margin: 0 0 10px;
+
   color: #0f172a;
 }
 
@@ -162,15 +306,23 @@
 
 .modal-actions {
   justify-content: flex-end;
+
   margin-top: 20px;
 }
+
+/* =====================================================
+   STATUS DE SOLICITAÇÕES
+===================================================== */
 
 .status-badge {
   min-width: 88px;
   padding: 5px 8px;
+
   display: inline-flex;
   justify-content: center;
+
   border-radius: 999px;
+
   font-size: 0.68rem;
   font-weight: 850;
 }
@@ -178,30 +330,36 @@
 .status-badge--pendente {
   color: #92400e;
   background: #fef3c7;
+
   border: 1px solid #fde68a;
 }
 
 .status-badge--aprovado {
   color: #166534;
   background: #dcfce7;
+
   border: 1px solid #bbf7d0;
 }
 
 .status-badge--negado {
   color: #991b1b;
   background: #fee2e2;
+
   border: 1px solid #fecaca;
 }
 
 .status-badge--cancelado {
   color: #475569;
   background: #f1f5f9;
+
   border: 1px solid #cbd5e1;
 }
 
 .request-description {
   display: block;
+
   margin-top: 3px;
+
   color: #64748b;
   font-size: 0.72rem;
 }
@@ -212,17 +370,26 @@
   font-weight: 650;
 }
 
-@media (max-width: 900px) {
+/* =====================================================
+   RESPONSIVIDADE
+===================================================== */
+
+@media (max-width: 1000px) {
   .admin-form-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-form-grid__double {
+    grid-column: span 1;
+  }
+
+  .admin-form-grid__wide {
+    grid-column: 1 / -1;
   }
 }
 
-@media (max-width: 620px) {
-  .admin-form-grid {
-    grid-template-columns: 1fr;
-  }
-
+@media (max-width: 700px) {
   .admin-card {
     padding: 16px;
   }
@@ -232,12 +399,24 @@
     flex-direction: column;
   }
 
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-form-grid__double,
+  .admin-form-grid__wide {
+    grid-column: 1;
+  }
+
   .document-title-control {
     grid-template-columns: 1fr;
   }
 
   .document-title-control > span {
     min-height: 38px;
+
+    justify-content: flex-start;
+
     border-right: 1px solid #cbd5e1;
     border-bottom: 0;
     border-radius: 8px 8px 0 0;
@@ -245,5 +424,13 @@
 
   .document-title-control .form-control {
     border-radius: 0 0 8px 8px;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .modal-actions .btn {
+    width: 100%;
   }
 }
