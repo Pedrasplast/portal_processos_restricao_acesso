@@ -4,8 +4,17 @@ import {
   useRef,
   useState,
 } from 'react';
+
 import {
+  FiCheckCircle,
+  FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
+  FiChevronUp,
+  FiEye,
   FiFileText,
+  FiPlus,
+  FiSearch,
   FiTrash2,
   FiUpload,
 } from 'react-icons/fi';
@@ -14,17 +23,34 @@ import {
   SETORES,
   TIPOS_DOCUMENTO,
 } from '../../../config/documentos';
+
 import {
   excluirDocumento,
   publicarDocumento,
 } from '../../../services/documentosService';
+
+import {
+  visualizarDocumento,
+} from '../../../utils/arquivos';
+
 import {
   agruparDocumentos,
   formatarTituloProcesso,
   obterNumeracaoDocumento,
 } from '../../../utils/documentos';
 
+import {
+  normalizarChave,
+} from '../../../utils/texto';
+
 const NOVA_LINHA = '__NOVA_LINHA__';
+const TODOS_SETORES = '__TODOS_SETORES__';
+
+const OPCOES_POR_PAGINA = [
+  10,
+  20,
+  50,
+];
 
 function DocumentsPanel({
   documentos,
@@ -34,23 +60,64 @@ function DocumentsPanel({
   notify,
 }) {
   const [setor, setSetor] = useState('');
+
   const [
     processoSelecionado,
     setProcessoSelecionado,
   ] = useState(NOVA_LINHA);
+
   const [
     tipoDocumento,
     setTipoDocumento,
   ] = useState('');
-  const [descricao, setDescricao] = useState('');
-  const [arquivo, setArquivo] = useState(null);
-  const [salvando, setSalvando] = useState(false);
+
+  const [
+    descricao,
+    setDescricao,
+  ] = useState('');
+
+  const [
+    arquivo,
+    setArquivo,
+  ] = useState(null);
+
+  const [
+    salvando,
+    setSalvando,
+  ] = useState(false);
+
   const [
     documentoExcluir,
     setDocumentoExcluir,
   ] = useState(null);
 
+  const [
+    busca,
+    setBusca,
+  ] = useState('');
+
+  const [
+    setorFiltro,
+    setSetorFiltro,
+  ] = useState(TODOS_SETORES);
+
+  const [
+    paginaAtual,
+    setPaginaAtual,
+  ] = useState(1);
+
+  const [
+    itensPorPagina,
+    setItensPorPagina,
+  ] = useState(10);
+
+  const [
+    grupoExpandido,
+    setGrupoExpandido,
+  ] = useState(null);
+
   const inputFileRef = useRef(null);
+  const formRef = useRef(null);
 
   const grupos = useMemo(
     () => agruparDocumentos(documentos),
@@ -63,7 +130,10 @@ function DocumentsPanel({
         documentos,
         setor,
       ),
-    [documentos, setor],
+    [
+      documentos,
+      setor,
+    ],
   );
 
   const processoAtual = useMemo(() => {
@@ -74,10 +144,12 @@ function DocumentsPanel({
       return null;
     }
 
-    return numeracao.processosExistentes.find(
-      (grupo) =>
-        grupo.codigo === processoSelecionado,
-    ) || null;
+    return (
+      numeracao.processosExistentes.find(
+        (grupo) =>
+          grupo.codigo === processoSelecionado,
+      ) || null
+    );
   }, [
     setor,
     processoSelecionado,
@@ -95,37 +167,143 @@ function DocumentsPanel({
   const tiposDisponiveis = useMemo(() => {
     const tiposJaCadastrados = new Set(
       processoAtual
-        ? Object.keys(processoAtual.arquivos)
+        ? Object.keys(
+            processoAtual.arquivos,
+          )
         : [],
     );
 
     return TIPOS_DOCUMENTO.filter(
       (tipo) =>
-        !tiposJaCadastrados.has(tipo.valor),
+        !tiposJaCadastrados.has(
+          tipo.valor,
+        ),
     );
   }, [processoAtual]);
 
-  const tituloPreview = formatarTituloProcesso(
-    codigoAtual,
-    descricaoAtual || 'DESCRIÇÃO DO DOCUMENTO',
+  const tituloPreview =
+    formatarTituloProcesso(
+      codigoAtual,
+      descricaoAtual ||
+        'DESCRIÇÃO DO DOCUMENTO',
+    );
+
+  const setoresComDocumentos = useMemo(() => {
+    return [
+      ...new Set(
+        grupos
+          .map((grupo) => grupo.setor)
+          .filter(Boolean),
+      ),
+    ].sort((a, b) =>
+      String(a).localeCompare(
+        String(b),
+        'pt-BR',
+      ),
+    );
+  }, [grupos]);
+
+  const gruposFiltrados = useMemo(() => {
+    const termo = normalizarChave(
+      busca.trim(),
+    );
+
+    return grupos.filter((grupo) => {
+      const correspondeSetor =
+        setorFiltro === TODOS_SETORES ||
+        normalizarChave(grupo.setor) ===
+          normalizarChave(setorFiltro);
+
+      if (!correspondeSetor) {
+        return false;
+      }
+
+      if (!termo) {
+        return true;
+      }
+
+      const textoPesquisavel =
+        normalizarChave(
+          [
+            grupo.codigo,
+            grupo.numero,
+            grupo.descricao,
+            grupo.titulo,
+            grupo.setor,
+          ]
+            .filter(Boolean)
+            .join(' '),
+        );
+
+      return textoPesquisavel.includes(
+        termo,
+      );
+    });
+  }, [
+    grupos,
+    busca,
+    setorFiltro,
+  ]);
+
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(
+      gruposFiltrados.length /
+        itensPorPagina,
+    ),
+  );
+
+  const gruposDaPagina = useMemo(() => {
+    const inicio =
+      (paginaAtual - 1) *
+      itensPorPagina;
+
+    return gruposFiltrados.slice(
+      inicio,
+      inicio + itensPorPagina,
+    );
+  }, [
+    gruposFiltrados,
+    paginaAtual,
+    itensPorPagina,
+  ]);
+
+  const primeiroItem = gruposFiltrados.length
+    ? (paginaAtual - 1) *
+        itensPorPagina +
+      1
+    : 0;
+
+  const ultimoItem = Math.min(
+    paginaAtual * itensPorPagina,
+    gruposFiltrados.length,
   );
 
   useEffect(() => {
     if (!setor) {
-      setProcessoSelecionado(NOVA_LINHA);
+      setProcessoSelecionado(
+        NOVA_LINHA,
+      );
+
       setTipoDocumento('');
       setDescricao('');
+
       return;
     }
 
     if (
-      processoSelecionado !== NOVA_LINHA &&
+      processoSelecionado !==
+        NOVA_LINHA &&
       !numeracao.processosExistentes.some(
         (grupo) =>
-          grupo.codigo === processoSelecionado,
+          grupo.codigo ===
+          processoSelecionado,
       )
     ) {
-      setProcessoSelecionado(NOVA_LINHA);
+      setProcessoSelecionado(
+        NOVA_LINHA,
+      );
+
       setTipoDocumento('');
       setDescricao('');
     }
@@ -140,12 +318,37 @@ function DocumentsPanel({
       tipoDocumento &&
       !tiposDisponiveis.some(
         (tipo) =>
-          tipo.valor === tipoDocumento,
+          tipo.valor ===
+          tipoDocumento,
       )
     ) {
       setTipoDocumento('');
     }
-  }, [tipoDocumento, tiposDisponiveis]);
+  }, [
+    tipoDocumento,
+    tiposDisponiveis,
+  ]);
+
+  useEffect(() => {
+    setPaginaAtual(1);
+    setGrupoExpandido(null);
+  }, [
+    busca,
+    setorFiltro,
+    itensPorPagina,
+  ]);
+
+  useEffect(() => {
+    if (
+      paginaAtual >
+      totalPaginas
+    ) {
+      setPaginaAtual(totalPaginas);
+    }
+  }, [
+    paginaAtual,
+    totalPaginas,
+  ]);
 
   function limparArquivo() {
     setArquivo(null);
@@ -155,11 +358,49 @@ function DocumentsPanel({
     }
   }
 
+  function rolarParaFormulario() {
+    window.requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  }
+
+  function prepararNovoDocumentoNoGrupo(
+    grupo,
+    tipo,
+  ) {
+    setSetor(grupo.setor);
+
+    setProcessoSelecionado(
+      grupo.codigo,
+    );
+
+    setTipoDocumento(tipo.valor);
+    setDescricao('');
+
+    limparArquivo();
+    rolarParaFormulario();
+  }
+
+  function alternarGrupo(grupoId) {
+    setGrupoExpandido((atual) =>
+      atual === grupoId
+        ? null
+        : grupoId,
+    );
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
     if (!setor) {
-      notify('erro', 'Selecione o setor.');
+      notify(
+        'erro',
+        'Selecione o setor.',
+      );
+
       return;
     }
 
@@ -168,6 +409,7 @@ function DocumentsPanel({
         'erro',
         'Selecione o tipo do documento.',
       );
+
       return;
     }
 
@@ -179,6 +421,7 @@ function DocumentsPanel({
         'erro',
         'Informe a descrição do documento.',
       );
+
       return;
     }
 
@@ -187,6 +430,7 @@ function DocumentsPanel({
         'erro',
         'Selecione o arquivo PDF.',
       );
+
       return;
     }
 
@@ -210,16 +454,12 @@ function DocumentsPanel({
       limparArquivo();
       setTipoDocumento('');
 
-      /*
-       * Após criar uma linha nova, mantém essa linha
-       * selecionada para facilitar o cadastro dos outros
-       * tipos na mesma linha.
-       */
       await onReload();
 
       setProcessoSelecionado(
         publicacao.codigo,
       );
+
       setDescricao('');
     } catch (error) {
       notify(
@@ -233,7 +473,9 @@ function DocumentsPanel({
   }
 
   async function confirmarExclusao() {
-    if (!documentoExcluir) return;
+    if (!documentoExcluir) {
+      return;
+    }
 
     try {
       await excluirDocumento(
@@ -246,6 +488,7 @@ function DocumentsPanel({
       );
 
       setDocumentoExcluir(null);
+
       await onReload();
     } catch (error) {
       notify(
@@ -259,17 +502,21 @@ function DocumentsPanel({
   return (
     <div className="admin-stack">
       <form
-        className="admin-card"
+        ref={formRef}
+        className="admin-card document-form-card"
         onSubmit={handleSubmit}
       >
         <div className="admin-card__header">
           <div>
-            <h3>Adicionar Documento</h3>
+            <h3>
+              Adicionar Documento
+            </h3>
 
             <p>
-              Crie uma descrição única com numeração
-              automática e vincule POP, Fluxograma e
-              Mapa Visual à mesma linha.
+              Crie uma descrição única com
+              numeração automática e vincule
+              POP, Fluxograma e Mapa Visual
+              à mesma linha.
             </p>
           </div>
         </div>
@@ -285,23 +532,34 @@ function DocumentsPanel({
               className="form-control"
               value={setor}
               onChange={(event) => {
-                setSetor(event.target.value);
+                setSetor(
+                  event.target.value,
+                );
+
                 setProcessoSelecionado(
                   NOVA_LINHA,
                 );
+
                 setTipoDocumento('');
                 setDescricao('');
+
                 limparArquivo();
               }}
               disabled={salvando}
               required
             >
-              <option value="" disabled>
+              <option
+                value=""
+                disabled
+              >
                 Selecione o setor
               </option>
 
               {SETORES.map((item) => (
-                <option key={item} value={item}>
+                <option
+                  key={item}
+                  value={item}
+                >
                   {item}
                 </option>
               ))}
@@ -321,11 +579,16 @@ function DocumentsPanel({
                 setProcessoSelecionado(
                   event.target.value,
                 );
+
                 setTipoDocumento('');
                 setDescricao('');
+
                 limparArquivo();
               }}
-              disabled={salvando || !setor}
+              disabled={
+                salvando ||
+                !setor
+              }
               required
             >
               <option value={NOVA_LINHA}>
@@ -381,24 +644,30 @@ function DocumentsPanel({
               disabled={
                 salvando ||
                 !setor ||
-                tiposDisponiveis.length === 0
+                tiposDisponiveis.length ===
+                  0
               }
               required
             >
-              <option value="" disabled>
+              <option
+                value=""
+                disabled
+              >
                 {tiposDisponiveis.length
                   ? 'Selecione o tipo'
                   : 'Todos os tipos já cadastrados'}
               </option>
 
-              {tiposDisponiveis.map((tipo) => (
-                <option
-                  key={tipo.valor}
-                  value={tipo.valor}
-                >
-                  {tipo.nome}
-                </option>
-              ))}
+              {tiposDisponiveis.map(
+                (tipo) => (
+                  <option
+                    key={tipo.valor}
+                    value={tipo.valor}
+                  >
+                    {tipo.nome}
+                  </option>
+                ),
+              )}
             </select>
           </div>
 
@@ -408,7 +677,9 @@ function DocumentsPanel({
             </label>
 
             <div className="document-title-control">
-              <span>{codigoAtual || '__'} -</span>
+              <span>
+                {codigoAtual || '__'} -
+              </span>
 
               <input
                 id="document-title"
@@ -425,7 +696,9 @@ function DocumentsPanel({
                 disabled={
                   salvando ||
                   !setor ||
-                  Boolean(processoAtual)
+                  Boolean(
+                    processoAtual,
+                  )
                 }
                 placeholder="DESCRIÇÃO DO DOCUMENTO"
                 maxLength={140}
@@ -460,7 +733,8 @@ function DocumentsPanel({
               disabled={
                 salvando ||
                 !setor ||
-                tiposDisponiveis.length === 0
+                tiposDisponiveis.length ===
+                  0
               }
               required
             />
@@ -473,7 +747,8 @@ function DocumentsPanel({
           disabled={
             salvando ||
             !setor ||
-            tiposDisponiveis.length === 0
+            tiposDisponiveis.length ===
+              0
           }
         >
           <FiUpload />
@@ -484,17 +759,105 @@ function DocumentsPanel({
         </button>
       </form>
 
-      <section className="admin-card">
-        <div className="admin-card__header">
+      <section className="admin-card documents-manager-card">
+        <div className="admin-card__header documents-manager-header">
           <div>
-            <h3>Documentos Cadastrados</h3>
+            <h3>
+              Documentos Cadastrados
+            </h3>
 
             <p>
               {grupos.length} linha(s) e{' '}
-              {documentos.length} arquivo(s) no
-              repositório.
+              {documentos.length} arquivo(s)
+              no repositório.
             </p>
           </div>
+        </div>
+
+        <div className="documents-toolbar">
+          <div className="documents-search">
+            <FiSearch
+              aria-hidden="true"
+            />
+
+            <input
+              type="search"
+              value={busca}
+              onChange={(event) =>
+                setBusca(
+                  event.target.value,
+                )
+              }
+              placeholder="Buscar número, descrição ou setor..."
+              aria-label="Buscar documentos"
+            />
+          </div>
+
+          <div className="documents-filter-group">
+            <label htmlFor="documents-sector-filter">
+              Setor
+            </label>
+
+            <select
+              id="documents-sector-filter"
+              value={setorFiltro}
+              onChange={(event) =>
+                setSetorFiltro(
+                  event.target.value,
+                )
+              }
+            >
+              <option value={TODOS_SETORES}>
+                Todos os setores
+              </option>
+
+              {setoresComDocumentos.map(
+                (item) => (
+                  <option
+                    key={item}
+                    value={item}
+                  >
+                    {item}
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+
+          <div className="documents-filter-group documents-page-size">
+            <label htmlFor="documents-page-size">
+              Por página
+            </label>
+
+            <select
+              id="documents-page-size"
+              value={itensPorPagina}
+              onChange={(event) =>
+                setItensPorPagina(
+                  Number(
+                    event.target.value,
+                  ),
+                )
+              }
+            >
+              {OPCOES_POR_PAGINA.map(
+                (quantidade) => (
+                  <option
+                    key={quantidade}
+                    value={quantidade}
+                  >
+                    {quantidade}
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+        </div>
+
+        <div className="documents-results-summary">
+          {gruposFiltrados.length === 0
+            ? 'Nenhuma linha encontrada.'
+            : `Mostrando ${primeiroItem}–${ultimoItem} de ${gruposFiltrados.length} linha(s).`}
         </div>
 
         {erro && (
@@ -503,113 +866,239 @@ function DocumentsPanel({
           </div>
         )}
 
-        <div className="table-wrapper">
-          <table className="data-table documents-grouped-table">
-            <thead>
-              <tr>
-                <th>Descrição do documento</th>
-                <th>Setor</th>
+        <div className="documents-accordion-list">
+          {loading ? (
+            <div className="documents-empty-state">
+              Carregando documentos...
+            </div>
+          ) : gruposFiltrados.length ===
+            0 ? (
+            <div className="documents-empty-state">
+              Nenhum documento encontrado
+              com os filtros informados.
+            </div>
+          ) : (
+            gruposDaPagina.map((grupo) => {
+              const expandido =
+                grupoExpandido === grupo.id;
 
-                {TIPOS_DOCUMENTO.map((tipo) => (
-                  <th key={tipo.valor}>
-                    {tipo.nome}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+              const quantidadeArquivos =
+                Object.keys(
+                  grupo.arquivos,
+                ).length;
 
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan={
-                      2 +
-                      TIPOS_DOCUMENTO.length
+              return (
+                <article
+                  key={grupo.id}
+                  className={
+                    `document-accordion${
+                      expandido
+                        ? ' expanded'
+                        : ''
+                    }`
+                  }
+                >
+                  <button
+                    type="button"
+                    className="document-accordion-summary"
+                    onClick={() =>
+                      alternarGrupo(
+                        grupo.id,
+                      )
                     }
-                    className="empty-state"
-                  >
-                    Carregando...
-                  </td>
-                </tr>
-              ) : grupos.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={
-                      2 +
-                      TIPOS_DOCUMENTO.length
+                    aria-expanded={
+                      expandido
                     }
-                    className="empty-state"
                   >
-                    Nenhum documento cadastrado.
-                  </td>
-                </tr>
-              ) : (
-                grupos.map((grupo) => (
-                  <tr key={grupo.id}>
-                    <td>
-                      <div className="document-cell">
+                    <div className="document-accordion-main">
+                      <span className="document-accordion-icon">
                         <FiFileText />
+                      </span>
+
+                      <div className="document-accordion-text">
+                        <strong>
+                          {grupo.titulo}
+                        </strong>
 
                         <span>
-                          {grupo.titulo}
+                          Setor: {grupo.setor}
                         </span>
                       </div>
-                    </td>
+                    </div>
 
-                    <td>{grupo.setor}</td>
+                    <div className="document-accordion-status">
+                      <span className="document-files-count">
+                        {quantidadeArquivos} de{' '}
+                        {TIPOS_DOCUMENTO.length}{' '}
+                        arquivo(s)
+                      </span>
 
-                    {TIPOS_DOCUMENTO.map(
-                      (tipo) => {
-                        const documento =
-                          grupo.arquivos[
-                            tipo.valor
-                          ];
+                      <span className="document-manage-label">
+                        {expandido
+                          ? 'Fechar'
+                          : 'Gerenciar'}
+                      </span>
 
-                        return (
-                          <td
-                            key={tipo.valor}
-                            className="document-type-cell"
-                          >
-                            {documento ? (
-                              <div className="document-type-actions">
-                                <span className="document-type-badge">
-                                  Cadastrado
-                                </span>
+                      {expandido ? (
+                        <FiChevronUp />
+                      ) : (
+                        <FiChevronDown />
+                      )}
+                    </div>
+                  </button>
 
-                                <button
-                                  type="button"
-                                  className="btn btn-danger document-delete-button"
-                                  onClick={() =>
-                                    setDocumentoExcluir(
-                                      documento,
-                                    )
-                                  }
-                                >
-                                  <FiTrash2 />
-                                  Excluir
-                                </button>
+                  {expandido && (
+                    <div className="document-accordion-content">
+                      <div className="document-types-grid">
+                        {TIPOS_DOCUMENTO.map(
+                          (tipo) => {
+                            const documento =
+                              grupo.arquivos[
+                                tipo.valor
+                              ];
+
+                            return (
+                              <div
+                                key={tipo.valor}
+                                className={
+                                  `document-type-card${
+                                    documento
+                                      ? ' registered'
+                                      : ' missing'
+                                  }`
+                                }
+                              >
+                                <div className="document-type-card-header">
+                                  <strong>
+                                    {tipo.nome}
+                                  </strong>
+
+                                  {documento ? (
+                                    <span className="document-type-status registered">
+                                      <FiCheckCircle />
+                                      Cadastrado
+                                    </span>
+                                  ) : (
+                                    <span className="document-type-status missing">
+                                      Pendente
+                                    </span>
+                                  )}
+                                </div>
+
+                                {documento ? (
+                                  <div className="document-type-card-actions">
+                                    <button
+                                      type="button"
+                                      className="btn document-view-button"
+                                      onClick={() =>
+                                        visualizarDocumento(
+                                          documento,
+                                        )
+                                      }
+                                    >
+                                      <FiEye />
+                                      Visualizar
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      className="btn btn-danger document-delete-button"
+                                      onClick={() =>
+                                        setDocumentoExcluir(
+                                          documento,
+                                        )
+                                      }
+                                    >
+                                      <FiTrash2 />
+                                      Excluir
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="btn document-add-button"
+                                    onClick={() =>
+                                      prepararNovoDocumentoNoGrupo(
+                                        grupo,
+                                        tipo,
+                                      )
+                                    }
+                                  >
+                                    <FiPlus />
+                                    Adicionar
+                                  </button>
+                                )}
                               </div>
-                            ) : (
-                              <span className="document-type-missing">
-                                —
-                              </span>
-                            )}
-                          </td>
-                        );
-                      },
-                    )}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                            );
+                          },
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })
+          )}
         </div>
+
+        {!loading &&
+          gruposFiltrados.length > 0 && (
+            <div className="documents-pagination">
+              <button
+                type="button"
+                className="documents-pagination-button"
+                onClick={() =>
+                  setPaginaAtual(
+                    (atual) =>
+                      Math.max(
+                        1,
+                        atual - 1,
+                      ),
+                  )
+                }
+                disabled={
+                  paginaAtual === 1
+                }
+              >
+                <FiChevronLeft />
+                Anterior
+              </button>
+
+              <span className="documents-pagination-status">
+                Página {paginaAtual} de{' '}
+                {totalPaginas}
+              </span>
+
+              <button
+                type="button"
+                className="documents-pagination-button"
+                onClick={() =>
+                  setPaginaAtual(
+                    (atual) =>
+                      Math.min(
+                        totalPaginas,
+                        atual + 1,
+                      ),
+                  )
+                }
+                disabled={
+                  paginaAtual ===
+                  totalPaginas
+                }
+              >
+                Próxima
+                <FiChevronRight />
+              </button>
+            </div>
+          )}
       </section>
 
       {documentoExcluir && (
         <div className="modal-backdrop">
           <div className="modal-card">
-            <h3>Confirmar exclusão</h3>
+            <h3>
+              Confirmar exclusão
+            </h3>
 
             <p>
               Remover o arquivo{' '}
@@ -629,7 +1118,9 @@ function DocumentsPanel({
                 type="button"
                 className="btn btn-secondary"
                 onClick={() =>
-                  setDocumentoExcluir(null)
+                  setDocumentoExcluir(
+                    null,
+                  )
                 }
               >
                 Cancelar
@@ -638,7 +1129,9 @@ function DocumentsPanel({
               <button
                 type="button"
                 className="btn btn-danger"
-                onClick={confirmarExclusao}
+                onClick={
+                  confirmarExclusao
+                }
               >
                 <FiTrash2 />
                 Excluir

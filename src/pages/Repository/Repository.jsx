@@ -2,19 +2,37 @@ import {
   useMemo,
   useState,
 } from 'react';
+
 import {
+  FiDownload,
+  FiEye,
   FiFileText,
 } from 'react-icons/fi';
 
 import AppLayout from '../../components/layout/AppLayout';
+
 import {
   SETORES,
   TIPOS_DOCUMENTO,
 } from '../../config/documentos';
-import { useDocumentos } from '../../hooks/useDocumentos';
-import { baixarDocumento } from '../../utils/arquivos';
-import { agruparDocumentos } from '../../utils/documentos';
-import { normalizarChave } from '../../utils/texto';
+
+import {
+  useDocumentos,
+} from '../../hooks/useDocumentos';
+
+import {
+  baixarDocumento,
+  visualizarDocumento,
+} from '../../utils/arquivos';
+
+import {
+  agruparDocumentos,
+} from '../../utils/documentos';
+
+import {
+  normalizarChave,
+} from '../../utils/texto';
+
 import './Repository.css';
 
 function Repository() {
@@ -51,12 +69,19 @@ function Repository() {
 
     return grupos.filter(
       (grupo) =>
-        normalizarChave(grupo.setor) === setor,
+        normalizarChave(grupo.setor) ===
+        setor,
     );
   }, [grupos, setorSelecionado]);
 
+  function handleVisualizar(arquivo) {
+    visualizarDocumento(arquivo);
+  }
+
   async function handleDownload(arquivo) {
-    if (!arquivo || baixandoId) return;
+    if (!arquivo || baixandoId) {
+      return;
+    }
 
     setBaixandoId(arquivo.id);
 
@@ -75,30 +100,32 @@ function Repository() {
         </h2>
 
         <p>
-          Consulte e baixe os documentos
+          Consulte, visualize e baixe os documentos
           operacionais padronizados por setor.
         </p>
       </header>
 
       <div className="repository-filters card">
-        {['TODOS', ...SETORES].map((setor) => (
-          <button
-            key={setor}
-            type="button"
-            className={
-              `repository-chip${
-                setorSelecionado === setor
-                  ? ' active'
-                  : ''
-              }`
-            }
-            onClick={() =>
-              setSetorSelecionado(setor)
-            }
-          >
-            {setor}
-          </button>
-        ))}
+        {['TODOS', ...SETORES].map(
+          (setor) => (
+            <button
+              key={setor}
+              type="button"
+              className={
+                `repository-chip${
+                  setorSelecionado === setor
+                    ? ' active'
+                    : ''
+                }`
+              }
+              onClick={() =>
+                setSetorSelecionado(setor)
+              }
+            >
+              {setor}
+            </button>
+          ),
+        )}
       </div>
 
       {erro && (
@@ -127,12 +154,12 @@ function Repository() {
               </th>
 
               <th
-                className="repository-col-download"
+                className="repository-col-actions"
                 colSpan={
                   TIPOS_DOCUMENTO.length
                 }
               >
-                Download
+                Visualizar / Download
               </th>
             </tr>
           </thead>
@@ -168,65 +195,102 @@ function Repository() {
               )}
 
             {!loading &&
-              gruposFiltrados.map((grupo) => (
-                <tr key={grupo.id}>
-                  <td>
-                    <div className="repository-description">
-                      <FiFileText className="repository-icon" />
+              gruposFiltrados.map(
+                (grupo) => (
+                  <tr key={grupo.id}>
+                    <td>
+                      <div className="repository-description">
+                        <FiFileText
+                          className="repository-icon"
+                        />
 
-                      <span>
-                        {grupo.titulo}
-                      </span>
-                    </div>
-                  </td>
+                        <span>
+                          {grupo.titulo}
+                        </span>
+                      </div>
+                    </td>
 
-                  <td className="repository-sector">
-                    {grupo.setor}
-                  </td>
+                    <td className="repository-sector">
+                      {grupo.setor}
+                    </td>
 
-                  {TIPOS_DOCUMENTO.map(
-                    (tipo) => {
-                      const arquivo =
-                        grupo.arquivos[
-                          tipo.valor
-                        ];
+                    {TIPOS_DOCUMENTO.map(
+                      (tipo) => {
+                        const arquivo =
+                          grupo.arquivos[
+                            tipo.valor
+                          ];
 
-                      return (
-                        <td
-                          className="repository-download"
-                          key={tipo.valor}
-                          data-label={tipo.nome}
-                        >
-                          {arquivo ? (
-                            <button
-                              type="button"
-                              className="repository-download-button"
-                              disabled={
-                                baixandoId ===
-                                arquivo.id
-                              }
-                              onClick={() =>
-                                handleDownload(
-                                  arquivo,
-                                )
-                              }
-                            >
-                              {baixandoId ===
-                              arquivo.id
-                                ? 'Baixando...'
-                                : tipo.nome}
-                            </button>
-                          ) : (
-                            <span className="repository-missing">
-                              —
-                            </span>
-                          )}
-                        </td>
-                      );
-                    },
-                  )}
-                </tr>
-              ))}
+                        return (
+                          <td
+                            className="repository-actions-cell"
+                            key={tipo.valor}
+                            data-label={tipo.nome}
+                          >
+                            {arquivo ? (
+                              <div className="repository-file-actions">
+                                <span className="repository-file-type">
+                                  {tipo.nome}
+                                </span>
+
+                                <div className="repository-action-buttons">
+                                  <button
+                                    type="button"
+                                    className="repository-action-button repository-view-button"
+                                    onClick={() =>
+                                      handleVisualizar(
+                                        arquivo,
+                                      )
+                                    }
+                                    aria-label={
+                                      `Visualizar ${tipo.nome}`
+                                    }
+                                  >
+                                    <FiEye />
+                                    <span>
+                                      Visualizar
+                                    </span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="repository-action-button repository-download-button"
+                                    disabled={
+                                      baixandoId ===
+                                      arquivo.id
+                                    }
+                                    onClick={() =>
+                                      handleDownload(
+                                        arquivo,
+                                      )
+                                    }
+                                    aria-label={
+                                      `Baixar ${tipo.nome}`
+                                    }
+                                  >
+                                    <FiDownload />
+
+                                    <span>
+                                      {baixandoId ===
+                                      arquivo.id
+                                        ? 'Baixando...'
+                                        : 'Download'}
+                                    </span>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="repository-missing">
+                                —
+                              </span>
+                            )}
+                          </td>
+                        );
+                      },
+                    )}
+                  </tr>
+                ),
+              )}
           </tbody>
         </table>
       </div>

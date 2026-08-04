@@ -20,6 +20,8 @@
   font-size: 0.7rem;
   font-weight: 750;
   white-space: nowrap;
+
+  cursor: pointer;
 }
 
 .repository-chip:hover {
@@ -29,7 +31,8 @@
 }
 
 .repository-chip.active {
-  color: #fff;
+  color: #ffffff;
+
   background:
     linear-gradient(
       135deg,
@@ -40,7 +43,8 @@
   border-color: #0284c7;
 
   box-shadow:
-    0 5px 14px rgba(2, 132, 199, 0.2);
+    0 5px 14px
+    rgba(2, 132, 199, 0.2);
 }
 
 .repository-error {
@@ -65,10 +69,12 @@
   padding: 6px 10px;
 
   color: #991b1b;
-  background: #fff;
+  background: #ffffff;
 
   border: 1px solid #fda4af;
   border-radius: 7px;
+
+  cursor: pointer;
 }
 
 /* =====================================================
@@ -80,18 +86,19 @@
 
   overflow-x: auto;
 
-  background: #fff;
+  background: #ffffff;
 
   border: 1px solid #dbe4ee;
   border-radius: 14px;
 
   box-shadow:
-    0 12px 32px rgba(15, 23, 42, 0.055);
+    0 12px 32px
+    rgba(15, 23, 42, 0.055);
 }
 
 .repository-table {
   width: 100%;
-  min-width: 920px;
+  min-width: 1180px;
 
   border-collapse: separate;
   border-spacing: 0;
@@ -103,6 +110,7 @@
   padding: 14px 16px;
 
   color: #1e293b;
+
   background:
     linear-gradient(
       180deg,
@@ -126,36 +134,39 @@
 }
 
 .repository-col-description {
-  width: calc(100% - 550px);
+  width: calc(100% - 790px);
 }
 
 .repository-col-sector {
   width: 150px;
 }
 
-.repository-col-download {
-  width: 400px;
+.repository-col-actions {
+  width: 640px;
 
   text-align: center !important;
 }
 
-.repository-table tbody
+.repository-table
+  tbody
   tr:nth-child(odd) > td {
-  background: #fff;
+  background: #ffffff;
 }
 
-.repository-table tbody
+.repository-table
+  tbody
   tr:nth-child(even) > td {
   background: #e8f0f7;
 }
 
-.repository-table tbody
+.repository-table
+  tbody
   tr:hover > td {
   background: #d8ecfa;
 }
 
 .repository-table td {
-  min-height: 66px;
+  min-height: 76px;
   padding: 14px 16px;
 
   border-right: 1px solid #e8eef5;
@@ -163,16 +174,18 @@
 
   vertical-align: middle;
 
-  transition: background 150ms ease;
+  transition:
+    background 150ms ease;
 }
 
-.repository-table tbody
+.repository-table
+  tbody
   tr:last-child td {
   border-bottom: 0;
 }
 
 /* =====================================================
-   DESCRIÇÃO ÚNICA
+   DESCRIÇÃO
 ===================================================== */
 
 .repository-description {
@@ -214,11 +227,11 @@
 }
 
 /* =====================================================
-   DOWNLOADS
+   AÇÕES DOS ARQUIVOS
 ===================================================== */
 
-.repository-download {
-  width: 133px;
+.repository-actions-cell {
+  width: 213px;
 
   padding-right: 8px !important;
   padding-left: 8px !important;
@@ -226,33 +239,117 @@
   text-align: center;
 }
 
-.repository-download-button {
-  min-width: 88px;
-  min-height: 34px;
-  padding: 7px 9px;
+.repository-file-actions {
+  width: 100%;
+  min-width: 0;
 
+  display: grid;
+  gap: 8px;
+
+  justify-items: center;
+}
+
+.repository-file-type {
+  color: #334155;
+  font-size: 0.95 rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.repository-action-buttons {
+  width: 100%;
+
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 6px;
+}
+
+.repository-action-button {
+  min-width: 0;
+  min-height: 35px;
+
+  padding: 7px 8px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+
+  border-radius: 8px;
+
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1;
+
+  white-space: nowrap;
+  cursor: pointer;
+
+  transition:
+    color 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.repository-action-button svg {
+  width: 14px;
+  height: 14px;
+
+  flex-shrink: 0;
+}
+
+.repository-view-button {
+  color: #166534;
+  background: #f0fdf4;
+
+  border: 1px solid #bbf7d0;
+}
+
+.repository-view-button:hover {
+  color: #ffffff;
+  background: #16a34a;
+  border-color: #16a34a;
+
+  transform: translateY(-1px);
+}
+
+.repository-download-button {
   color: #0369a1;
   background: #f0f9ff;
 
   border: 1px solid #bae6fd;
-  border-radius: 8px;
-
-  font-size: 0.73rem;
-  font-weight: 750;
 }
 
 .repository-download-button:hover:not(:disabled) {
-  color: #fff;
+  color: #ffffff;
   background: #0284c7;
   border-color: #0284c7;
+
+  transform: translateY(-1px);
 }
 
-.repository-download-button:disabled {
-  opacity: 0.65;
+.repository-action-button:focus-visible {
+  outline: 3px solid
+    rgba(37, 99, 235, 0.2);
+
+  outline-offset: 2px;
+}
+
+.repository-action-button:disabled {
+  opacity: 0.6;
+
+  cursor: wait;
+  transform: none;
 }
 
 .repository-missing {
   color: #94a3b8;
+  font-weight: 800;
 }
 
 .repository-empty {
@@ -266,11 +363,52 @@
    RESPONSIVIDADE
 ===================================================== */
 
+@media (max-width: 1200px) {
+  .repository-table {
+    min-width: 1100px;
+  }
+
+  .repository-col-description {
+    width: calc(100% - 730px);
+  }
+
+  .repository-col-actions {
+    width: 580px;
+  }
+
+  .repository-actions-cell {
+    width: 193px;
+  }
+
+  .repository-action-button {
+    padding-right: 6px;
+    padding-left: 6px;
+
+    font-size: 0.64rem;
+  }
+}
+
 @media (max-width: 900px) {
   .repository-filters {
     flex-wrap: nowrap;
 
     overflow-x: auto;
+  }
+
+  .repository-table {
+    min-width: 1040px;
+  }
+
+  .repository-col-description {
+    width: 330px;
+  }
+
+  .repository-col-sector {
+    width: 130px;
+  }
+
+  .repository-col-actions {
+    width: 580px;
   }
 }
 
@@ -284,15 +422,34 @@
     width: 100%;
   }
 
-  .repository-table {
-    min-width: 820px;
-  }
-
   .repository-description {
     grid-template-columns:
       20px
       minmax(0, 1fr);
 
     font-size: 0.78rem;
+  }
+
+  .repository-action-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .repository-actions-cell {
+    width: 150px;
+  }
+
+  .repository-col-actions {
+    width: 450px;
+  }
+
+  .repository-table {
+    min-width: 910px;
+  }
+}
+
+@media (hover: none) {
+  .repository-view-button:hover,
+  .repository-download-button:hover:not(:disabled) {
+    transform: none;
   }
 }
