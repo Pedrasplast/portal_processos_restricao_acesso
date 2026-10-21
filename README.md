@@ -22,6 +22,7 @@ A configuração está em `supabase/migrations/`, para rodar no SQL Editor nesta
 4. `20261021d_excluir_usuario.sql` — excluir usuário pelo painel
 5. `20261021e_negar_pedido.sql` — negar pedido pela aba Usuários
 6. `20261021f_setores.sql` — cadastro de setores
+7. `20261021g_setor_desativado_oculta.sql` — setor desativado oculta seus documentos
 
 Tabelas:
 
@@ -30,7 +31,7 @@ Tabelas:
 | `profiles` | Um por usuário (criado automaticamente no cadastro). `regra` = `usuario` ou `admin`; `acesso_liberado`, `bloqueado`. |
 | `solicitacoes_acesso` | Pedidos de acesso (histórico). No máximo um pendente por usuário. |
 | `pops` | Documentos: `titulo` (`01 - DESCRIÇÃO`), `setor`, `tipo_documento` (`POP`, `FLUXOGRAMA`, `MANUAL`), `storage_path`. |
-| `setores` | Setores (nome único, ativo). Gerenciados em Administração > Setores. |
+| `setores` | Setores (nome único, ativo). Gerenciados em Administração > Setores. Setor desativado: documentos ocultos no Início/Repositório (só admin vê, em Gerenciar documentos). |
 | `convites` | Links de convite (uso único, com validade). Sem acesso direto: só via funções. |
 | `usuarios_pops` | Legado, não usado pelo front (só admin acessa). |
 

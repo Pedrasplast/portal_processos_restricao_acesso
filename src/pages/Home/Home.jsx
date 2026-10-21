@@ -5,9 +5,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import AppLayout, { useLayout } from '../../components/layout/AppLayout';
 import { TIPOS_DOCUMENTO } from '../../config/documentos';
 import { useAuth } from '../../hooks/useAuth';
-import { useDocumentos } from '../../hooks/useDocumentos';
+import { useDocumentosPublicos } from '../../hooks/useDocumentosPublicos';
 import { useFeedback } from '../../hooks/useFeedback';
-import { useSetores } from '../../hooks/useSetores';
 import { baixarDocumento, visualizarDocumento } from '../../utils/arquivos';
 import { agruparDocumentos } from '../../utils/documentos';
 import { nomeExibicao, nomePorEmail } from '../../utils/texto';
@@ -54,8 +53,7 @@ function Inicio() {
   const { notificar } = useFeedback();
   const { user, profile, isAdmin } = useAuth();
   const { pendentes } = useLayout();
-  const { documentos, loading, erro, recarregar } = useDocumentos();
-  const { ativos: setoresAtivos } = useSetores();
+  const { documentos, setoresAtivos, loading, erro, recarregar } = useDocumentosPublicos();
   const [termo, setTermo] = useState('');
 
   const grupos = useMemo(() => agruparDocumentos(documentos), [documentos]);

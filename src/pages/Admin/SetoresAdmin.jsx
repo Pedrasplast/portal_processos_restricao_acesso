@@ -97,10 +97,14 @@ function SetoresConteudo() {
     const ok = await confirmar({
       titulo: desativar ? 'Desativar setor' : 'Reativar setor',
       mensagem: desativar
-        ? `${setor.nome} deixará de aparecer no cadastro de novos documentos.`
-        : `${setor.nome} voltará a aparecer no cadastro de novos documentos.`,
+        ? setor.documentos > 0
+          ? `Os ${setor.documentos} documento(s) de ${setor.nome} deixarão de aparecer no Início e no Repositório para todos os usuários.`
+          : `${setor.nome} deixará de aparecer no cadastro de novos documentos.`
+        : setor.documentos > 0
+          ? `Os ${setor.documentos} documento(s) de ${setor.nome} voltarão a aparecer no Início e no Repositório.`
+          : `${setor.nome} voltará a aparecer no cadastro de novos documentos.`,
       detalhe: desativar
-        ? 'Os documentos que já existem continuam disponíveis no repositório. Você pode reativar depois.'
+        ? 'Nada é apagado: os documentos continuam salvos, visíveis só em Gerenciar documentos, e voltam ao reativar o setor.'
         : undefined,
       textoConfirmar: desativar ? 'Desativar' : 'Reativar',
       perigo: desativar,
@@ -123,7 +127,7 @@ function SetoresConteudo() {
     if (setor.documentos > 0) {
       notificar(
         'aviso',
-        `${setor.nome} tem ${setor.documentos} documento(s) e não pode ser excluído. Use "Desativar" para tirá-lo dos novos cadastros.`,
+        `${setor.nome} tem ${setor.documentos} documento(s) e não pode ser excluído. Use "Desativar" para ocultá-lo sem apagar nada.`,
         { titulo: 'Setor com documentos' },
       );
       return;
@@ -161,7 +165,7 @@ function SetoresConteudo() {
             <p>
               {resumo.ativos} {resumo.ativos === 1 ? 'ativo' : 'ativos'}
               {resumo.desativados > 0 && ` e ${resumo.desativados} ${resumo.desativados === 1 ? 'desativado' : 'desativados'}`}.
-              Setores com documentos não podem ser excluídos, apenas desativados.
+              Setores desativados e seus documentos não aparecem para quem consulta o portal.
             </p>
           </div>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => carregar()} disabled={loading}>
@@ -311,8 +315,9 @@ function SetoresConteudo() {
         <div className="setores-dica">
           <strong>Desativar ou excluir?</strong>
           <p>
-            <b>Desativar</b> tira o setor do cadastro de novos documentos, mas mantém os documentos
-            antigos no repositório. <b>Excluir</b> só é possível quando o setor não tem nenhum documento.
+            <b>Desativar</b> oculta o setor e os documentos dele do Início e do Repositório para todos,
+            sem apagar nada; ao reativar, tudo volta. <b>Excluir</b> só é possível quando o setor não
+            tem nenhum documento.
           </p>
         </div>
       </aside>
