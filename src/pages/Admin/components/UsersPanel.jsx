@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FiCheck, FiRefreshCw, FiSlash, FiUnlock, FiUserX, FiUsers } from 'react-icons/fi';
+import { FiCheck, FiRefreshCw, FiTrash2, FiUnlock, FiUserX, FiUsers } from 'react-icons/fi';
 
 import {
   ACOES_ACESSO,
   definirAcessoUsuario,
+  excluirUsuario,
   listarUsuarios,
 } from '../../../services/solicitacoesService';
 import InvitesCard from './InvitesCard';
@@ -65,6 +66,27 @@ function UsersPanel({ notify, onChanged }) {
     void carregar();
   }, [carregar]);
 
+  async function excluir(usuario) {
+    const nome = usuario.nome || usuario.email;
+    const confirmar = window.confirm(
+      `Excluir a conta de ${nome} (${usuario.email})?\n\n` +
+        'A conta é apagada de vez. Se a pessoa se cadastrar de novo, ' +
+        'precisará de nova aprovação.',
+    );
+    if (!confirmar) return;
+
+    setProcessandoId(usuario.id);
+    try {
+      await excluirUsuario(usuario.id);
+      notify('sucesso', `Conta de ${nome} excluída.`);
+      await Promise.all([carregar(), onChanged?.()]);
+    } catch (error) {
+      notify('erro', `Erro ao excluir usuário: ${error.message || 'erro desconhecido'}`);
+    } finally {
+      setProcessandoId(null);
+    }
+  }
+
   async function executar(usuario, acao) {
     const nome = usuario.nome || usuario.email;
     if (!window.confirm(CONFIRMACOES[acao](nome))) return;
@@ -97,20 +119,26 @@ function UsersPanel({ notify, onChanged }) {
       </button>
     );
 
+    let principal;
     if (usuario.bloqueado) {
-      return (
-        <div className="request-actions">
-          {botao(ACOES_ACESSO.DESBLOQUEAR, 'Desbloquear', FiUnlock, 'btn-secondary')}
-        </div>
-      );
+      principal = botao(ACOES_ACESSO.DESBLOQUEAR, 'Desbloquear', FiUnlock, 'btn-secondary');
+    } else if (usuario.acesso_ativo) {
+      principal = botao(ACOES_ACESSO.REVOGAR, 'Revogar', FiUserX, 'btn-secondary');
+    } else {
+      principal = botao(ACOES_ACESSO.LIBERAR, 'Liberar', FiCheck, 'btn-success');
     }
 
     return (
       <div className="request-actions">
-        {usuario.acesso_ativo
-          ? botao(ACOES_ACESSO.REVOGAR, 'Revogar', FiUserX, 'btn-secondary')
-          : botao(ACOES_ACESSO.LIBERAR, 'Liberar', FiCheck, 'btn-success')}
-        {botao(ACOES_ACESSO.BLOQUEAR, 'Bloquear', FiSlash, 'btn-danger')}
+        {principal}
+        <button
+          type="button"
+          className="btn btn-danger"
+          disabled={processando}
+          onClick={() => excluir(usuario)}
+        >
+          <FiTrash2 /> Excluir
+        </button>
       </div>
     );
   }
@@ -127,7 +155,7 @@ function UsersPanel({ notify, onChanged }) {
             </h3>
             <p>
               Liberado entra sem nova aprovação. Revogar tira o acesso (pode pedir de novo).
-              Bloquear impede até de pedir.
+              Excluir apaga a conta.
             </p>
           </div>
 
