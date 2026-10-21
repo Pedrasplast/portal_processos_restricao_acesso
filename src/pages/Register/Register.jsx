@@ -1,16 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     FiArrowLeft,
     FiCheckCircle,
+    FiAlertTriangle,
+    FiLink,
     FiUserPlus,
 } from 'react-icons/fi';
 
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import {
     cadastrarConta,
     sair,
 } from '../../services/authService';
+import { validarConvite } from '../../services/convitesService';
 
 import './Register.css';
 
@@ -25,6 +28,43 @@ function Register() {
     const [loading, setLoading] = useState(false);
     const [erro, setErro] = useState('');
     const [sucesso, setSucesso] = useState('');
+
+    /*
+     * Link de convite (/cadastro?convite=TOKEN): quem se cadastra por um
+     * convite válido já entra liberado, sem aprovação do administrador.
+     */
+    const [searchParams] = useSearchParams();
+    const tokenConvite = searchParams.get('convite') || '';
+    const [convite, setConvite] = useState({
+        situacao: tokenConvite ? 'verificando' : 'sem',
+        email: null,
+    });
+
+    useEffect(() => {
+        if (!tokenConvite) return undefined;
+        let ativo = true;
+
+        validarConvite(tokenConvite)
+            .then((resultado) => {
+                if (!ativo) return;
+                setConvite({
+                    situacao: resultado.valido ? 'valido' : 'invalido',
+                    email: resultado.email || null,
+                });
+                if (resultado.valido && resultado.email) {
+                    setForm((anterior) => ({ ...anterior, email: resultado.email }));
+                }
+            })
+            .catch(() => {
+                if (ativo) setConvite({ situacao: 'invalido', email: null });
+            });
+
+        return () => {
+            ativo = false;
+        };
+    }, [tokenConvite]);
+
+    const conviteValido = convite.situacao === 'valido';
 
     function atualizarCampo(campo, valor) {
         setForm((anterior) => ({
@@ -80,6 +120,7 @@ function Register() {
                     nome,
                     email,
                     senha: form.senha,
+                    convite: conviteValido ? tokenConvite : null,
                 });
 
             /*
@@ -96,18 +137,18 @@ function Register() {
                 await sair();
             }
 
-            if (
-                resultado.user &&
-                !resultado.session
-            ) {
-                setSucesso(
-                    'Cadastro realizado com sucesso. Verifique seu e-mail para confirmar a conta. Depois, faça o login para enviar sua solicitação de acesso ao administrador.',
-                );
-            } else {
-                setSucesso(
-                    'Cadastro realizado com sucesso. Agora faça o login para enviar sua solicitação de acesso ao administrador.',
-                );
-            }
+            const precisaConfirmar = resultado.user && !resultado.session;
+            const proximoPasso = conviteValido
+                ? 'Seu acesso já está liberado pelo convite.'
+                : 'No primeiro login, sua solicitação será enviada ao administrador.';
+
+            setSucesso(
+                precisaConfirmar
+                    ? `Cadastro realizado com sucesso. Verifique seu e-mail para confirmar a conta e depois faça o login. ${proximoPasso}`
+                    : `Cadastro realizado com sucesso. Agora faça o login. ${proximoPasso}`,
+            );
+
+            if (conviteValido) setConvite({ situacao: 'usado', email: null });
 
             setForm({
                 nome: '',
@@ -167,12 +208,31 @@ function Register() {
                 <h1>Criar Conta</h1>
 
                 <p>
-                    Cadastre seu acesso ao Portal.
-                    A criação da conta não libera
-                    os documentos automaticamente:
-                    no primeiro login, o administrador
-                    precisa aprovar sua entrada.
+                    {conviteValido
+                        ? 'Você recebeu um convite para o Portal de Processos. Preencha seus dados para criar a conta.'
+                        : 'Cadastre seu acesso ao Portal. A criação da conta não libera os documentos automaticamente: no primeiro login, o administrador precisa aprovar sua entrada.'}
                 </p>
+
+                {conviteValido && (
+                    <div className="register-message register-message--success">
+                        <FiLink />
+                        <span>
+                            Convite válido: ao criar a conta, seu acesso já estará liberado.
+                            {convite.email && ' Use o e-mail indicado no convite.'}
+                        </span>
+                    </div>
+                )}
+
+                {convite.situacao === 'invalido' && (
+                    <div className="register-message register-message--error">
+                        <FiAlertTriangle />
+                        <span>
+                            Este link de convite é inválido, já foi usado ou expirou.
+                            Você pode criar a conta mesmo assim, mas o administrador
+                            precisará aprovar seu acesso.
+                        </span>
+                    </div>
+                )}
 
                 {erro && (
                     <div className="register-message register-message--error">
@@ -232,6 +292,7 @@ function Register() {
                         placeholder="seu-email@dominio.com"
                         autoComplete="email"
                         disabled={loading}
+                        readOnly={conviteValido && Boolean(convite.email)}
                         required
                     />
                 </div>
