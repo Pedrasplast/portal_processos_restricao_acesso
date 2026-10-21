@@ -1,22 +1,20 @@
-# Migração para a versão refatorada
+# Publicação desta versão (segurança do Supabase)
 
-1. Faça backup do projeto atual.
-2. Copie o conteúdo desta pasta para uma nova branch.
-3. Crie `.env` a partir de `.env.example`.
-4. Execute `supabase/solicitacoes_acesso.sql`.
-5. Confirme que a tabela `profiles` possui os administradores com `regra = admin`.
-6. Confirme que `usuarios_pops` possui nome, email e descricao (descricao pode ser nula).
-7. Confirme que o bucket `pops` e as políticas RLS existentes permitem as operações necessárias.
-8. Rode `npm install`, `npm run dev` e depois `npm run build`.
+O banco e o front precisam ser atualizados **juntos**: a migração deixa o
+bucket privado, e a versão antiga do site usa links públicos.
 
-## Rotas mantidas
+1. Suba este código para o GitHub e confirme que o build da Vercel passou
+   (ainda sem promover para produção, se possível).
+2. No Supabase "Gestão de Processos" → SQL Editor, rode
+   `supabase/migrations/20261021_seguranca_acesso.sql`.
+3. Promova/publique o deploy na Vercel.
+4. Teste: login de admin, login de usuário comum (pedido → aprovar → abrir
+   PDF), logout e novo login (deve pedir aprovação de novo).
 
-- `/` — Home, protegida por aprovação do acesso.
-- `/pops` — Repositório, protegido por aprovação do acesso.
-- `/login` — Login.
-- `/admin` — Painel administrativo.
-- `/admin/pops` — redireciona para `/admin` para manter compatibilidade.
+Entre os passos 2 e 3 os PDFs não abrem na versão antiga. Faça em horário
+de pouco uso.
 
-## Importante
+## Configurações recomendadas no painel do Supabase
 
-Usuários comuns precisam existir em `usuarios_pops` e recebem uma nova solicitação a cada login. Administradores (`profiles.regra = admin`) entram diretamente no painel sem solicitar aprovação.
+- Authentication → Sign In / Providers → Email: manter "Confirm email" ligado.
+- Authentication → URL Configuration: Site URL = endereço da Vercel.

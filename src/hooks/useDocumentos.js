@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listarDocumentos } from '../services/documentosService';
 
-export function useDocumentos({ admin = false } = {}) {
+export function useDocumentos() {
   const [documentos, setDocumentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
@@ -11,7 +11,7 @@ export function useDocumentos({ admin = false } = {}) {
     setErro('');
 
     try {
-      const data = await listarDocumentos({ admin });
+      const data = await listarDocumentos();
       setDocumentos(data);
     } catch (error) {
       console.error(error);
@@ -19,7 +19,7 @@ export function useDocumentos({ admin = false } = {}) {
     } finally {
       setLoading(false);
     }
-  }, [admin]);
+  }, []);
 
   useEffect(() => {
     void recarregar();

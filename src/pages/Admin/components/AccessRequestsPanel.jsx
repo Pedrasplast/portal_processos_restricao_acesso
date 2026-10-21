@@ -2,11 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiRefreshCw, FiX } from 'react-icons/fi';
 
 import {
-  atualizarStatus,
+  decidirSolicitacao,
   listarSolicitacoes,
   STATUS_ACESSO,
 } from '../../../services/solicitacoesService';
-import { listarUsuarios } from '../../../services/usuariosService';
 
 const PESO_STATUS = {
   PENDENTE: 0,
@@ -25,44 +24,29 @@ function formatarData(valor) {
   }).format(data);
 }
 
-function AccessRequestsPanel({ notify, onPendingCountChange }) {
+/*
+ * Sem polling próprio: recarrega quando a contagem de pendentes (vinda
+ * do Admin) muda, após cada decisão, ou no botão "Atualizar".
+ */
+function AccessRequestsPanel({ notify, pendingCount, onChanged }) {
   const [solicitacoes, setSolicitacoes] = useState([]);
-  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processandoId, setProcessandoId] = useState(null);
 
-  const carregar = useCallback(async (silencioso = false) => {
-    if (!silencioso) setLoading(true);
-
+  const carregar = useCallback(async () => {
+    setLoading(true);
     try {
-      const [listaSolicitacoes, listaUsuarios] = await Promise.all([
-        listarSolicitacoes(),
-        listarUsuarios(),
-      ]);
-
-      setSolicitacoes(listaSolicitacoes);
-      setUsuarios(listaUsuarios);
-      onPendingCountChange(
-        listaSolicitacoes.filter((item) => item.status === STATUS_ACESSO.PENDENTE).length,
-      );
+      setSolicitacoes(await listarSolicitacoes());
     } catch (error) {
-      if (!silencioso) notify('erro', `Erro ao carregar solicitações: ${error.message}`);
+      notify('erro', `Erro ao carregar solicitações: ${error.message}`);
     } finally {
-      if (!silencioso) setLoading(false);
+      setLoading(false);
     }
-  }, [notify, onPendingCountChange]);
+  }, [notify]);
 
   useEffect(() => {
     void carregar();
-    const interval = setInterval(() => void carregar(true), 5000);
-    return () => clearInterval(interval);
-  }, [carregar]);
-
-  const usuarioPorEmail = useMemo(() => {
-    const mapa = new Map();
-    usuarios.forEach((usuario) => mapa.set(String(usuario.email).trim().toLowerCase(), usuario));
-    return mapa;
-  }, [usuarios]);
+  }, [carregar, pendingCount]);
 
   const ordenadas = useMemo(
     () =>
@@ -77,16 +61,15 @@ function AccessRequestsPanel({ notify, onPendingCountChange }) {
   async function decidir(id, status) {
     setProcessandoId(id);
     try {
-      await atualizarStatus(id, status);
+      await decidirSolicitacao(id, status);
       notify(
         'sucesso',
-        status === STATUS_ACESSO.APROVADO
-          ? 'Acesso aprovado com sucesso.'
-          : 'Solicitação negada.',
+        status === STATUS_ACESSO.APROVADO ? 'Acesso aprovado com sucesso.' : 'Solicitação negada.',
       );
-      await carregar(true);
+      await Promise.all([carregar(), onChanged?.()]);
     } catch (error) {
       notify('erro', `Erro ao atualizar solicitação: ${error.message}`);
+      await carregar();
     } finally {
       setProcessandoId(null);
     }
@@ -99,7 +82,15 @@ function AccessRequestsPanel({ notify, onPendingCountChange }) {
           <h3>Solicitações de Acesso</h3>
           <p>Aprove ou negue cada tentativa de entrada de usuários comuns.</p>
         </div>
-        <button type="button" className="btn btn-secondary" onClick={() => carregar()} disabled={loading}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => {
+            void carregar();
+            void onChanged?.();
+          }}
+          disabled={loading}
+        >
           <FiRefreshCw /> Atualizar
         </button>
       </div>
@@ -122,15 +113,13 @@ function AccessRequestsPanel({ notify, onPendingCountChange }) {
               <tr><td colSpan="5" className="empty-state">Nenhuma solicitação encontrada.</td></tr>
             ) : (
               ordenadas.map((solicitacao) => {
-                const usuario = usuarioPorEmail.get(String(solicitacao.email).toLowerCase());
                 const pendente = solicitacao.status === STATUS_ACESSO.PENDENTE;
                 const processando = processandoId === solicitacao.id;
 
                 return (
                   <tr key={solicitacao.id}>
                     <td>
-                      <strong>{usuario?.nome || 'Usuário autenticado'}</strong>
-                      {usuario?.descricao && <small className="request-description">{usuario.descricao}</small>}
+                      <strong>{solicitacao.nome || 'Usuário sem nome'}</strong>
                     </td>
                     <td>{solicitacao.email}</td>
                     <td>{formatarData(solicitacao.criado_em)}</td>
@@ -160,7 +149,9 @@ function AccessRequestsPanel({ notify, onPendingCountChange }) {
                           </button>
                         </div>
                       ) : (
-                        <span className="request-finished">Finalizada</span>
+                        <span className="request-finished">
+                          Finalizada {formatarData(solicitacao.decidido_em)}
+                        </span>
                       )}
                     </td>
                   </tr>

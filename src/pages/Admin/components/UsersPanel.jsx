@@ -1,291 +1,55 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { FiRefreshCw, FiTrash2, FiUsers } from 'react-icons/fi';
 
-import {
-  FiRefreshCw,
-  FiTrash2,
-  FiUsers,
-} from 'react-icons/fi';
+import { listarUsuarios, revogarAcessoUsuario } from '../../../services/solicitacoesService';
 
-import {
-  atualizarStatus,
-  listarSolicitacoes,
-  STATUS_ACESSO,
-} from '../../../services/solicitacoesService';
-
-/*
- * Formata a data de aprovação para exibição.
- */
 function formatarData(valor) {
-  if (!valor) {
-    return '—';
-  }
-
+  if (!valor) return '—';
   const data = new Date(valor);
-
-  if (
-    Number.isNaN(
-      data.getTime(),
-    )
-  ) {
-    return '—';
-  }
-
-  return new Intl.DateTimeFormat(
-    'pt-BR',
-    {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    },
-  ).format(data);
+  if (Number.isNaN(data.getTime())) return '—';
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(data);
 }
 
-function UsersPanel({
-  notify,
-}) {
-  const [
-    solicitacoes,
-    setSolicitacoes,
-  ] = useState([]);
+/*
+ * Lista todos os usuários cadastrados (1 chamada RPC, sem polling).
+ * "Acesso ativo" = tem uma sessão de login aprovada e ainda aberta.
+ */
+function UsersPanel({ notify }) {
+  const [usuarios, setUsuarios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [processandoId, setProcessandoId] = useState(null);
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
-
-  const [
-    processandoId,
-    setProcessandoId,
-  ] = useState(null);
-
-  /*
-   * Carrega as solicitações de acesso.
-   */
-  const carregarUsuarios =
-    useCallback(
-      async (
-        silencioso = false,
-      ) => {
-        if (!silencioso) {
-          setLoading(true);
-        }
-
-        try {
-          const dados =
-            await listarSolicitacoes();
-
-          setSolicitacoes(
-            dados,
-          );
-        } catch (error) {
-          if (!silencioso) {
-            notify(
-              'erro',
-              `Erro ao carregar usuários autorizados: ${
-                error.message ||
-                'erro desconhecido'
-              }`,
-            );
-          }
-        } finally {
-          if (!silencioso) {
-            setLoading(false);
-          }
-        }
-      },
-      [notify],
-    );
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    try {
+      setUsuarios(await listarUsuarios());
+    } catch (error) {
+      notify('erro', `Erro ao carregar usuários: ${error.message || 'erro desconhecido'}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [notify]);
 
   useEffect(() => {
-    void carregarUsuarios();
+    void carregar();
+  }, [carregar]);
 
-    /*
-     * Atualiza automaticamente a lista
-     * a cada 10 segundos.
-     */
-    const intervalo =
-      setInterval(() => {
-        void carregarUsuarios(
-          true,
-        );
-      }, 10000);
+  async function revogar(usuario) {
+    const nome = usuario.nome || usuario.email;
+    if (!window.confirm(`Deseja realmente revogar o acesso de ${nome}?`)) return;
 
-    return () => {
-      clearInterval(
-        intervalo,
-      );
-    };
-  }, [carregarUsuarios]);
-
-  /*
-   * Um mesmo usuário pode possuir várias
-   * solicitações aprovadas, pois o sistema
-   * cria uma solicitação a cada login.
-   *
-   * Aqui agrupamos todas as solicitações
-   * aprovadas pelo usuário ou pelo e-mail.
-   */
-  const usuariosAutorizados =
-    useMemo(() => {
-      const mapa = new Map();
-
-      solicitacoes
-        .filter(
-          (solicitacao) =>
-            solicitacao.status ===
-            STATUS_ACESSO.APROVADO,
-        )
-        .forEach(
-          (solicitacao) => {
-            const email =
-              String(
-                solicitacao.email ||
-                  '',
-              )
-                .trim()
-                .toLowerCase();
-
-            const chave =
-              solicitacao.user_id ||
-              email;
-
-            if (!chave) {
-              return;
-            }
-
-            const dataAprovacao =
-              solicitacao.aprovado_em ||
-              solicitacao.criado_em ||
-              null;
-
-            const existente =
-              mapa.get(chave);
-
-            if (!existente) {
-              mapa.set(
-                chave,
-                {
-                  id: chave,
-
-                  userId:
-                    solicitacao.user_id,
-
-                  email:
-                    email ||
-                    'E-mail não informado',
-
-                  ultimaAprovacao:
-                    dataAprovacao,
-
-                  solicitacaoIds: [
-                    solicitacao.id,
-                  ],
-                },
-              );
-
-              return;
-            }
-
-            existente.solicitacaoIds.push(
-              solicitacao.id,
-            );
-
-            const dataExistente =
-              new Date(
-                existente.ultimaAprovacao ||
-                  0,
-              );
-
-            const novaData =
-              new Date(
-                dataAprovacao ||
-                  0,
-              );
-
-            if (
-              novaData >
-              dataExistente
-            ) {
-              existente.ultimaAprovacao =
-                dataAprovacao;
-            }
-          },
-        );
-
-      return Array.from(
-        mapa.values(),
-      ).sort(
-        (a, b) =>
-          String(
-            a.email,
-          ).localeCompare(
-            String(
-              b.email,
-            ),
-            'pt-BR',
-          ),
-      );
-    }, [solicitacoes]);
-
-  /*
-   * Revoga todas as solicitações aprovadas
-   * daquele usuário.
-   */
-  async function revogarAcesso(
-    usuario,
-  ) {
-    const confirmar =
-      window.confirm(
-        `Deseja realmente revogar o acesso de ${usuario.email}?`,
-      );
-
-    if (!confirmar) {
-      return;
-    }
-
-    setProcessandoId(
-      usuario.id,
-    );
-
+    setProcessandoId(usuario.id);
     try {
-      /*
-       * Pode existir mais de uma solicitação
-       * aprovada para o mesmo usuário.
-       */
-      await Promise.all(
-        usuario.solicitacaoIds.map(
-          (solicitacaoId) =>
-            atualizarStatus(
-              solicitacaoId,
-              STATUS_ACESSO.CANCELADO,
-            ),
-        ),
-      );
-
-      notify(
-        'sucesso',
-        `Acesso de ${usuario.email} revogado com sucesso.`,
-      );
-
-      await carregarUsuarios(
-        true,
-      );
+      await revogarAcessoUsuario(usuario.id);
+      notify('sucesso', `Acesso de ${nome} revogado.`);
+      await carregar();
     } catch (error) {
-      notify(
-        'erro',
-        `Erro ao revogar acesso: ${
-          error.message ||
-          'erro desconhecido'
-        }`,
-      );
+      notify('erro', `Erro ao revogar acesso: ${error.message || 'erro desconhecido'}`);
     } finally {
-      setProcessandoId(
-        null,
-      );
+      setProcessandoId(null);
     }
   }
 
@@ -295,28 +59,13 @@ function UsersPanel({
         <div className="admin-card__header admin-card__header--actions">
           <div>
             <h3>
-              <FiUsers />
-
-              Usuários Autorizados
+              <FiUsers /> Usuários
             </h3>
-
-            <p>
-              Usuários que possuem uma
-              solicitação de acesso aprovada.
-            </p>
+            <p>Usuários cadastrados no portal e situação do acesso no login atual.</p>
           </div>
 
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() =>
-              carregarUsuarios()
-            }
-            disabled={loading}
-          >
-            <FiRefreshCw />
-
-            Atualizar
+          <button type="button" className="btn btn-secondary" onClick={() => carregar()} disabled={loading}>
+            <FiRefreshCw /> Atualizar
           </button>
         </div>
 
@@ -324,101 +73,68 @@ function UsersPanel({
           <table className="data-table">
             <thead>
               <tr>
-                <th>E-mail</th>
-
-                <th>
-                  Última aprovação
-                </th>
-
-                <th>
-                  Acessos aprovados
-                </th>
-
+                <th>Usuário</th>
+                <th>Perfil</th>
+                <th>Último login</th>
+                <th>Última aprovação</th>
+                <th>Acesso</th>
                 <th>Ações</th>
               </tr>
             </thead>
 
             <tbody>
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="empty-state"
-                  >
-                    Carregando usuários
-                    autorizados...
-                  </td>
-                </tr>
-              ) : usuariosAutorizados.length ===
-                0 ? (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="empty-state"
-                  >
-                    Nenhum usuário possui
-                    acesso aprovado.
-                  </td>
-                </tr>
+              {loading && usuarios.length === 0 ? (
+                <tr><td colSpan="6" className="empty-state">Carregando usuários...</td></tr>
+              ) : usuarios.length === 0 ? (
+                <tr><td colSpan="6" className="empty-state">Nenhum usuário cadastrado.</td></tr>
               ) : (
-                usuariosAutorizados.map(
-                  (usuario) => {
-                    const processando =
-                      processandoId ===
-                      usuario.id;
+                usuarios.map((usuario) => {
+                  const admin = usuario.regra === 'admin';
+                  const processando = processandoId === usuario.id;
 
-                    return (
-                      <tr
-                        key={
-                          usuario.id
-                        }
-                      >
-                        <td>
-                          <strong>
-                            {
-                              usuario.email
-                            }
-                          </strong>
-                        </td>
-
-                        <td>
-                          {formatarData(
-                            usuario.ultimaAprovacao,
-                          )}
-                        </td>
-
-                        <td>
-                          {
-                            usuario
-                              .solicitacaoIds
-                              .length
-                          }
-                        </td>
-
-                        <td>
+                  return (
+                    <tr key={usuario.id}>
+                      <td>
+                        <strong>{usuario.nome || '—'}</strong>
+                        <small className="request-description">{usuario.email}</small>
+                      </td>
+                      <td>{admin ? 'Administrador' : 'Usuário'}</td>
+                      <td>{formatarData(usuario.ultimo_login)}</td>
+                      <td>
+                        {formatarData(usuario.ultima_aprovacao)}
+                        {usuario.acessos_aprovados > 0 && (
+                          <small className="request-description">
+                            {usuario.acessos_aprovados} aprovação(ões)
+                          </small>
+                        )}
+                      </td>
+                      <td>
+                        {admin ? (
+                          <span className="status-badge status-badge--aprovado">SEMPRE</span>
+                        ) : usuario.acesso_ativo ? (
+                          <span className="status-badge status-badge--aprovado">ATIVO</span>
+                        ) : (
+                          <span className="status-badge status-badge--cancelado">SEM ACESSO</span>
+                        )}
+                      </td>
+                      <td>
+                        {!admin && usuario.acesso_ativo ? (
                           <button
                             type="button"
                             className="btn btn-danger"
-                            disabled={
-                              processando
-                            }
-                            onClick={() =>
-                              revogarAcesso(
-                                usuario,
-                              )
-                            }
+                            disabled={processando}
+                            onClick={() => revogar(usuario)}
                           >
                             <FiTrash2 />
-
-                            {processando
-                              ? 'Revogando...'
-                              : 'Revogar acesso'}
+                            {processando ? 'Revogando...' : 'Revogar acesso'}
                           </button>
-                        </td>
-                      </tr>
-                    );
-                  },
-                )
+                        ) : (
+                          <span className="request-finished">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

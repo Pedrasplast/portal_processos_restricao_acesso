@@ -21,3 +21,7 @@ export function nomePorEmail(email = '') {
     .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase())
     .join(' ');
 }
+
+export function sanitizarNomeArquivo(nome = '') {
+  return removerAcentos(nome).replace(/[^a-zA-Z0-9._-]/g, '_');
+}

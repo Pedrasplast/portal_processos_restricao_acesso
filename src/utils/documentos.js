@@ -240,7 +240,6 @@ export function agruparDocumentos(documentos = []) {
 
     grupo.arquivos[documento.tipo] = {
       ...documento,
-      url: documento.arquivo_url,
       tipo: documento.tipo,
       codigo: documento.codigo,
     };
