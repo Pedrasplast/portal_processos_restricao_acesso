@@ -170,8 +170,8 @@ function Register() {
                     Cadastre seu acesso ao Portal.
                     A criação da conta não libera
                     os documentos automaticamente:
-                    o administrador continuará
-                    aprovando sua entrada.
+                    no primeiro login, o administrador
+                    precisa aprovar sua entrada.
                 </p>
 
                 {erro && (

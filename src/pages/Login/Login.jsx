@@ -16,6 +16,12 @@ import './Login.css';
 /* Intervalo de verificação enquanto aguarda o admin (só com a aba visível). */
 const INTERVALO_VERIFICACAO = 5000;
 
+const MENSAGENS_RECUSA = {
+  [STATUS_ACESSO.NEGADO]: 'O administrador negou sua solicitação de acesso.',
+  [STATUS_ACESSO.CANCELADO]: 'A solicitação foi cancelada.',
+  [STATUS_ACESSO.BLOQUEADO]: 'Seu acesso está bloqueado. Fale com o administrador do portal.',
+};
+
 function traduzirErro(error) {
   const mensagem = String(error?.message || '').toLowerCase();
 
@@ -73,14 +79,10 @@ function Login() {
         return;
       }
 
-      if (status === STATUS_ACESSO.NEGADO || status === STATUS_ACESSO.CANCELADO) {
+      if (MENSAGENS_RECUSA[status]) {
         setAguardando(false);
         await sair();
-        setErro(
-          status === STATUS_ACESSO.NEGADO
-            ? 'O administrador negou sua solicitação de acesso.'
-            : 'A solicitação foi cancelada.',
-        );
+        setErro(MENSAGENS_RECUSA[status]);
       }
     } catch (error) {
       console.error('Erro ao verificar solicitação:', error);
@@ -103,12 +105,18 @@ function Login() {
         return;
       }
 
-      /* Cada login (sessão) precisa da sua própria aprovação. */
+      /* Já liberado entra direto; senão, cria o pedido para o admin. */
       const status = await solicitarAcesso();
       setStatusAcesso(status);
 
       if (status === STATUS_ACESSO.APROVADO) {
         navigate('/', { replace: true });
+        return;
+      }
+
+      if (status === STATUS_ACESSO.BLOQUEADO) {
+        await sair();
+        setErro(MENSAGENS_RECUSA[status]);
         return;
       }
 
@@ -146,7 +154,7 @@ function Login() {
 
           <h1>Aguardando autorização</h1>
 
-          <p>Seu login foi validado. A entrada será liberada quando o administrador aprovar.</p>
+          <p>Seu login foi validado. A entrada será liberada quando o administrador aprovar. Depois disso, você não precisará de nova aprovação.</p>
 
           <div className="waiting-status">
             <span className="waiting-spinner" />
@@ -173,7 +181,7 @@ function Login() {
 
         <h1>Acesso ao Portal</h1>
 
-        <p>Entre com suas credenciais. Usuários comuns precisam de aprovação a cada login.</p>
+        <p>Entre com suas credenciais. No primeiro acesso, o administrador precisa liberar sua entrada.</p>
 
         {erro && <div className="login-error">{erro}</div>}
 
