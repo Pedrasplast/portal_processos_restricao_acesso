@@ -15,7 +15,7 @@ const BUCKET = 'pops';
 const ORDEM_TIPOS = {
   POP: 1,
   FLUXOGRAMA: 2,
-  'MAPA VISUAL': 3,
+  'MANUAL': 3,
 };
 
 export async function listarDocumentos({

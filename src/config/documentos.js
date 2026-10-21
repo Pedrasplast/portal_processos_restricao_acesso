@@ -10,7 +10,7 @@ export const SETORES = [
   'LOGISTICA',
   'PCP',
   'MOLDE',
-  'MARCAS E PATENTES',
+  'CD - SP',
   'PRODUÇÃO',
   'SCOPI',
   'QUALIDADE',
@@ -21,5 +21,6 @@ export const SETORES = [
 export const TIPOS_DOCUMENTO = [
   { valor: 'POP', nome: 'POP' },
   { valor: 'FLUXOGRAMA', nome: 'Fluxograma' },
-  { valor: 'MAPA VISUAL', nome: 'Mapa Visual' },
+  { valor: 'MANUAL', nome: 'Manual' },
+  
 ];

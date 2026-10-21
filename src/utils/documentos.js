@@ -3,7 +3,7 @@ import { normalizarChave, normalizarTexto } from './texto';
 const ORDEM_TIPOS = {
   POP: 1,
   FLUXOGRAMA: 2,
-  'MAPA VISUAL': 3,
+  'MANUAL': 3,
 };
 
 export function normalizarTipoDocumento(tipo = '') {
@@ -13,7 +13,7 @@ export function normalizarTipoDocumento(tipo = '') {
 
   if (tipoNormalizado === 'POP') return 'POP';
   if (tipoNormalizado === 'FLUXOGRAMA') return 'FLUXOGRAMA';
-  if (tipoNormalizado === 'MAPA VISUAL') return 'MAPA VISUAL';
+  if (tipoNormalizado === 'MANUAL') return 'MANUAL';
 
   return '';
 }
@@ -55,7 +55,7 @@ export function formatarTituloProcesso(numero, descricao) {
  * Antigo:
  * POP-01 | DESCRIÇÃO
  * FLUXOGRAMA-01 | DESCRIÇÃO
- * MAPA VISUAL-01 | DESCRIÇÃO
+ * MANUAL-01 | DESCRIÇÃO
  *
  * Dessa forma, os registros antigos continuam funcionando.
  */
@@ -92,7 +92,7 @@ export function analisarTituloDocumento(titulo = '', tipoDocumento = '') {
   }
 
   const padraoAntigo = tituloAjustado.match(
-    /^(POP|FLUXOGRAMA|MAPA\s+VISUAL)-(\d+)\s*\|\s*(.+)$/i,
+    /^(POP|FLUXOGRAMA|MANUAL)-(\d+)\s*\|\s*(.+)$/i,
   );
 
   if (!padraoAntigo) {
@@ -176,7 +176,7 @@ export function normalizarDocumentos(documentos = []) {
 }
 
 /*
- * Agrupa POP, Fluxograma e Mapa Visual pela combinação:
+ * Agrupa POP, Fluxograma e Manual pela combinação:
  *
  * setor + número
  *
