@@ -75,3 +75,8 @@ export const ACOES_ACESSO = {
 export function definirAcessoUsuario(userId, acao) {
   return rpc('definir_acesso_usuario', { p_user_id: userId, p_acao: acao });
 }
+
+/** Apaga a conta do usuário (perfil e pedidos saem junto). Não vale para admin. */
+export function excluirUsuario(userId) {
+  return rpc('excluir_usuario', { p_user_id: userId });
+}
