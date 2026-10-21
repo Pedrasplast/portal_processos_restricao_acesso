@@ -20,7 +20,7 @@ export async function obterPerfil(userId) {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, regra')
+    .select('id, regra, nome')
     .eq('id', userId)
     .maybeSingle();
 

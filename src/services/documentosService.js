@@ -7,8 +7,7 @@ import {
   normalizarDocumentos,
   normalizarTipoDocumento,
 } from '../utils/documentos';
-import { sanitizarNomeArquivo } from '../utils/arquivos';
-import { normalizarChave } from '../utils/texto';
+import { normalizarChave, sanitizarNomeArquivo } from '../utils/texto';
 
 const BUCKET = 'pops';
 
@@ -18,16 +17,17 @@ const ORDEM_TIPOS = {
   'MANUAL': 3,
 };
 
-export async function listarDocumentos({
-  admin = false,
-} = {}) {
-  const campos = admin
-    ? 'id, titulo, setor, tipo_documento, arquivo_url, storage_path'
-    : 'id, titulo, setor, tipo_documento, arquivo_url';
+/*
+ * O bucket "pops" é privado. O front recebe só o storage_path e gera um
+ * link assinado (temporário) na hora de visualizar/baixar. O banco
+ * (RLS) só devolve linhas para quem tem acesso aprovado na sessão.
+ */
+const VALIDADE_LINK_SEGUNDOS = 300;
 
+export async function listarDocumentos() {
   const { data, error } = await supabase
     .from('pops')
-    .select(campos)
+    .select('id, titulo, setor, tipo_documento, storage_path')
     .order('setor', { ascending: true })
     .order('titulo', { ascending: true });
 
@@ -76,9 +76,7 @@ async function prepararPublicacao({
 
   const { data, error } = await supabase
     .from('pops')
-    .select(
-      'id, titulo, setor, tipo_documento, arquivo_url, storage_path',
-    )
+    .select('id, titulo, setor, tipo_documento')
     .eq('setor', setorNormalizado);
 
   if (error) throw error;
@@ -214,53 +212,74 @@ export async function publicarDocumento({
   if (uploadError) throw uploadError;
 
   try {
-    const {
-      data: { publicUrl },
-    } = supabase.storage
-      .from(BUCKET)
-      .getPublicUrl(caminho);
-
     const { error: insertError } = await supabase
       .from('pops')
       .insert([
         {
           titulo: publicacao.titulo,
-          arquivo_url: publicUrl,
           storage_path: caminho,
           setor: publicacao.setor,
-          tipo_documento:
-            publicacao.tipoDocumento,
+          tipo_documento: publicacao.tipoDocumento,
         },
       ]);
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      if (insertError.code === '23505') {
+        throw new Error(
+          `${publicacao.tipoDocumento} já está cadastrado na linha ${publicacao.codigo} do setor ${publicacao.setor}. Atualize a página.`,
+        );
+      }
+      throw insertError;
+    }
 
     return publicacao;
   } catch (error) {
-    await supabase.storage
-      .from(BUCKET)
-      .remove([caminho]);
-
+    await supabase.storage.from(BUCKET).remove([caminho]);
     throw error;
   }
 }
 
+/*
+ * Remove primeiro a linha do banco (o que o usuário vê) e depois o PDF.
+ * Se a remoção do arquivo falhar, sobra só um arquivo órfão, nunca uma
+ * linha apontando para um PDF inexistente.
+ */
 export async function excluirDocumento(documento) {
-  if (documento.storage_path) {
-    const { error: storageError } =
-      await supabase.storage
-        .from(BUCKET)
-        .remove([documento.storage_path]);
-
-    if (storageError) throw storageError;
-  }
-
   const { error } = await supabase
     .from('pops')
     .delete()
     .eq('id', documento.id);
 
   if (error) throw error;
+
+  if (documento.storage_path) {
+    const { error: storageError } = await supabase.storage
+      .from(BUCKET)
+      .remove([documento.storage_path]);
+
+    if (storageError) {
+      console.warn('Documento removido, mas o PDF não foi apagado:', storageError);
+    }
+  }
+}
+
+/*
+ * Gera um link temporário para o PDF. Com `nomeDownload`, o navegador
+ * baixa o arquivo com esse nome em vez de abri-lo.
+ */
+export async function gerarLinkDocumento(storagePath, { nomeDownload } = {}) {
+  if (!storagePath) throw new Error('Documento sem arquivo vinculado.');
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(
+      storagePath,
+      VALIDADE_LINK_SEGUNDOS,
+      nomeDownload ? { download: nomeDownload } : undefined,
+    );
+
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 /*

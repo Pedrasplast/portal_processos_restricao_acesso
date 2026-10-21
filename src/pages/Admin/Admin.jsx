@@ -1,37 +1,38 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import AppLayout from '../../components/layout/AppLayout';
 import { useDocumentos } from '../../hooks/useDocumentos';
 import { useMensagem } from '../../hooks/useMensagem';
-import { listarSolicitacoes, STATUS_ACESSO } from '../../services/solicitacoesService';
+import { usePolling } from '../../hooks/usePolling';
+import { contarPendentes } from '../../services/solicitacoesService';
 import AccessRequestsPanel from './components/AccessRequestsPanel';
 import AdminTabs from './components/AdminTabs';
 import DocumentsPanel from './components/DocumentsPanel';
 import UsersPanel from './components/UsersPanel';
 import './Admin.css';
 
+/*
+ * Uma única verificação periódica no painel: a contagem de pendentes
+ * (resposta de 1 número). A lista de solicitações só é recarregada
+ * quando essa contagem muda ou quando o admin clica em "Atualizar".
+ */
+const INTERVALO_PENDENTES = 10000;
+
 function Admin() {
   const [tab, setTab] = useState('documentos');
   const [pendentes, setPendentes] = useState(0);
-  const { documentos, loading, erro, recarregar } = useDocumentos({ admin: true });
+  const { documentos, loading, erro, recarregar } = useDocumentos();
   const { mensagem, mostrarMensagem } = useMensagem();
 
   const atualizarPendentes = useCallback(async () => {
     try {
-      const solicitacoes = await listarSolicitacoes();
-      setPendentes(
-        solicitacoes.filter((item) => item.status === STATUS_ACESSO.PENDENTE).length,
-      );
+      setPendentes(await contarPendentes());
     } catch (error) {
       console.error(error);
     }
   }, []);
 
-  useEffect(() => {
-    void atualizarPendentes();
-    const interval = setInterval(() => void atualizarPendentes(), 5000);
-    return () => clearInterval(interval);
-  }, [atualizarPendentes]);
+  usePolling(atualizarPendentes, INTERVALO_PENDENTES);
 
   return (
     <AppLayout>
@@ -59,7 +60,8 @@ function Admin() {
       {tab === 'solicitacoes' && (
         <AccessRequestsPanel
           notify={mostrarMensagem}
-          onPendingCountChange={setPendentes}
+          pendingCount={pendentes}
+          onChanged={atualizarPendentes}
         />
       )}
     </AppLayout>
