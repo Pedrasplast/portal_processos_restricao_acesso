@@ -262,7 +262,8 @@
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 650;
-  overflow-wrap: anywhere;
+  font-variation-settings: "wdth" 88;
+  white-space: nowrap;
 }
 
 .tipo-escolha__opcao input {
@@ -789,4 +790,14 @@
     justify-content: flex-start;
     padding-top: 6px;
   }
+}
+
+.selo-desativado {
+  margin-left: 8px;
+  padding: 1px 7px;
+  color: var(--texto-2);
+  background: #eef0f4;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 650;
 }

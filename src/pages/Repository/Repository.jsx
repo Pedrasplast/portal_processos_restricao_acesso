@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import AppLayout from '../../components/layout/AppLayout';
 import { TIPOS_DOCUMENTO } from '../../config/documentos';
-import { useDocumentos } from '../../hooks/useDocumentos';
+import { useDocumentosPublicos } from '../../hooks/useDocumentosPublicos';
 import { useFeedback } from '../../hooks/useFeedback';
 import { baixarDocumento, visualizarDocumento } from '../../utils/arquivos';
 import { agruparDocumentos } from '../../utils/documentos';
@@ -17,7 +17,7 @@ const classeTipo = (valor) => `tipo--${String(valor).toLowerCase().split(' ')[0]
 
 function Repository() {
   const { notificar } = useFeedback();
-  const { documentos, loading, erro, recarregar } = useDocumentos();
+  const { documentos, loading, erro, recarregar } = useDocumentosPublicos();
   const [searchParams, setSearchParams] = useSearchParams();
   const [busca, setBusca] = useState(() => searchParams.get('busca') || '');
   const [baixandoId, setBaixandoId] = useState(null);

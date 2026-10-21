@@ -59,7 +59,12 @@ function DocumentsPanel({
   onReload,
 }) {
   const { notificar: notify, confirmar } = useFeedback();
-  const { ativos: setoresAtivos, loading: carregandoSetores } = useSetores();
+  const { setores: todosSetores, ativos: setoresAtivos, loading: carregandoSetores } = useSetores();
+
+  const setoresDesativados = useMemo(
+    () => new Set(todosSetores.filter((s) => !s.ativo).map((s) => normalizarChave(s.nome))),
+    [todosSetores],
+  );
 
   const [setor, setSetor] = useState('');
 
@@ -592,7 +597,14 @@ function DocumentsPanel({
 
                     <span className="docs-linha__texto">
                       <strong>{grupo.descricao}</strong>
-                      <small>{grupo.setor}</small>
+                      <small>
+                        {grupo.setor}
+                        {setoresDesativados.has(normalizarChave(grupo.setor)) && (
+                          <span className="selo-desativado" title="Não aparece no Início nem no Repositório">
+                            Setor desativado
+                          </span>
+                        )}
+                      </small>
                     </span>
 
                     <span className="cobertura" aria-label={`${Object.keys(grupo.arquivos).length} de ${TIPOS_DOCUMENTO.length} documentos`}>
