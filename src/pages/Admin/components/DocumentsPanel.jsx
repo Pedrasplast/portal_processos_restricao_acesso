@@ -18,7 +18,6 @@ import {
 } from 'react-icons/fi';
 
 import {
-  SETORES,
   TIPOS_DOCUMENTO,
 } from '../../../config/documentos';
 
@@ -32,6 +31,7 @@ import {
 } from '../../../utils/arquivos';
 
 import { useFeedback } from '../../../hooks/useFeedback';
+import { useSetores } from '../../../hooks/useSetores';
 
 import {
   agruparDocumentos,
@@ -59,6 +59,7 @@ function DocumentsPanel({
   onReload,
 }) {
   const { notificar: notify, confirmar } = useFeedback();
+  const { ativos: setoresAtivos, loading: carregandoSetores } = useSetores();
 
   const [setor, setSetor] = useState('');
 
@@ -367,6 +368,15 @@ function DocumentsPanel({
     grupo,
     tipo,
   ) {
+    if (!setoresAtivos.some((nome) => normalizarChave(nome) === normalizarChave(grupo.setor))) {
+      notify(
+        'aviso',
+        `O setor ${grupo.setor} está desativado. Reative-o em Administração > Setores para publicar novos documentos.`,
+        { titulo: 'Setor desativado' },
+      );
+      return;
+    }
+
     setSetor(grupo.setor);
 
     setProcessoSelecionado(
@@ -696,11 +706,16 @@ function DocumentsPanel({
                 disabled={salvando}
                 required
               >
-                <option value="" disabled>Selecione o setor</option>
-                {SETORES.map((item) => (
+                <option value="" disabled>
+                  {carregandoSetores ? 'Carregando setores...' : 'Selecione o setor'}
+                </option>
+                {setoresAtivos.map((item) => (
                   <option key={item} value={item}>{item}</option>
                 ))}
               </select>
+              {!carregandoSetores && setoresAtivos.length === 0 && (
+                <p className="form-ajuda">Nenhum setor ativo. Cadastre um em Administração &gt; Setores.</p>
+              )}
             </li>
 
             <li className="passo">

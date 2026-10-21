@@ -1,23 +1,31 @@
-import { useEffect, useMemo, useState } from 'react';
-import { FiClock, FiFolder, FiLink, FiUsers } from 'react-icons/fi';
+import { useMemo, useState } from 'react';
+import { FiDownload, FiEye, FiSearch } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
 
 import AppLayout, { useLayout } from '../../components/layout/AppLayout';
-import { SETORES, TIPOS_DOCUMENTO } from '../../config/documentos';
+import { TIPOS_DOCUMENTO } from '../../config/documentos';
 import { useAuth } from '../../hooks/useAuth';
 import { useDocumentos } from '../../hooks/useDocumentos';
-import { listarConvites } from '../../services/convitesService';
-import { listarUsuarios } from '../../services/solicitacoesService';
-import { agruparDocumentos, normalizarDocumentos } from '../../utils/documentos';
-import { nomePorEmail, normalizarChave } from '../../utils/texto';
+import { useFeedback } from '../../hooks/useFeedback';
+import { useSetores } from '../../hooks/useSetores';
+import { baixarDocumento, visualizarDocumento } from '../../utils/arquivos';
+import { agruparDocumentos } from '../../utils/documentos';
+import { nomeExibicao, nomePorEmail } from '../../utils/texto';
 import './Home.css';
 
-const classeTipo = (valor) => `tipo--${String(valor).toLowerCase().split(' ')[0]}`;
+const POR_COLUNA = 5;
 
-function primeiroNome(nome = '') {
-  const primeiro = nome.trim().split(/\s+/)[0] || '';
-  return primeiro.charAt(0).toUpperCase() + primeiro.slice(1).toLowerCase();
-}
+const COR_TIPO = {
+  POP: 'var(--tipo-pop)',
+  FLUXOGRAMA: 'var(--tipo-fluxograma)',
+  MANUAL: 'var(--tipo-manual)',
+};
+
+const PLURAL_TIPO = {
+  POP: 'POPs',
+  FLUXOGRAMA: 'Fluxogramas',
+  MANUAL: 'Manuais',
+};
 
 function saudacao() {
   const hora = new Date().getHours();
@@ -26,135 +34,109 @@ function saudacao() {
   return 'Boa noite';
 }
 
-function formatarData(valor) {
+/* "hoje", "ontem", "há 3 dias" ou a data. */
+function quando(valor) {
   if (!valor) return '';
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return '';
+
+  const inicioDoDia = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dias = Math.round((inicioDoDia(new Date()) - inicioDoDia(data)) / 86400000);
+
+  if (dias <= 0) return 'hoje';
+  if (dias === 1) return 'ontem';
+  if (dias < 7) return `há ${dias} dias`;
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(data).replace('.', '');
-}
-
-/* Pendências do administrador: pedidos, convites e contas liberadas. */
-function PainelAdmin() {
-  const { pendentes } = useLayout();
-  const [dados, setDados] = useState({ liberados: null, convites: null });
-
-  useEffect(() => {
-    let ativo = true;
-
-    Promise.all([listarUsuarios(), listarConvites()])
-      .then(([usuarios, convites]) => {
-        if (!ativo) return;
-        setDados({
-          liberados: usuarios.filter((u) => u.regra !== 'admin' && u.acesso_ativo).length,
-          convites: convites.filter((c) => c.situacao === 'ABERTO').length,
-        });
-      })
-      .catch((error) => console.error(error));
-
-    return () => {
-      ativo = false;
-    };
-  }, []);
-
-  return (
-    <section className="painel inicio-admin" aria-labelledby="inicio-admin-titulo">
-      <div className="painel__cabecalho">
-        <h2 id="inicio-admin-titulo">Administração</h2>
-      </div>
-
-      <ul className="inicio-admin__lista">
-        <li className={pendentes > 0 ? 'destaque' : undefined}>
-          <FiClock aria-hidden="true" />
-          <span>
-            <strong className="numero">{pendentes}</strong>{' '}
-            {pendentes === 1 ? 'pedido aguardando aprovação' : 'pedidos aguardando aprovação'}
-          </span>
-        </li>
-        <li>
-          <FiUsers aria-hidden="true" />
-          <span>
-            <strong className="numero">{dados.liberados ?? '–'}</strong>{' '}
-            {dados.liberados === 1 ? 'usuário com acesso liberado' : 'usuários com acesso liberado'}
-          </span>
-        </li>
-        <li>
-          <FiLink aria-hidden="true" />
-          <span>
-            <strong className="numero">{dados.convites ?? '–'}</strong>{' '}
-            {dados.convites === 1 ? 'convite em aberto' : 'convites em aberto'}
-          </span>
-        </li>
-      </ul>
-
-      <div className="inicio-admin__acoes">
-        <Link className="btn btn-secondary btn-sm" to="/admin/usuarios">Gerenciar usuários</Link>
-        <Link className="btn btn-secondary btn-sm" to="/admin/documentos">Gerenciar documentos</Link>
-      </div>
-    </section>
-  );
 }
 
 function Inicio() {
   const navigate = useNavigate();
+  const { notificar } = useFeedback();
   const { user, profile, isAdmin } = useAuth();
+  const { pendentes } = useLayout();
   const { documentos, loading, erro, recarregar } = useDocumentos();
+  const { ativos: setoresAtivos } = useSetores();
+  const [termo, setTermo] = useState('');
 
   const grupos = useMemo(() => agruparDocumentos(documentos), [documentos]);
 
-  /* Setores do cadastro + qualquer setor antigo que ainda tenha documentos. */
-  const setores = useMemo(() => {
-    const porSetor = new Map();
-    SETORES.forEach((setor) => porSetor.set(normalizarChave(setor), { nome: setor, processos: [] }));
+  const setoresComDocs = useMemo(
+    () => [...new Set(grupos.map((g) => g.setor))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [grupos],
+  );
 
-    grupos.forEach((grupo) => {
-      const chave = normalizarChave(grupo.setor);
-      if (!porSetor.has(chave)) porSetor.set(chave, { nome: grupo.setor, processos: [] });
-      porSetor.get(chave).processos.push(grupo);
-    });
+  /* Mais recentes de cada tipo. Os arquivos agrupados já trazem a
+     descrição única do processo e o código. */
+  const colunas = useMemo(() => {
+    const arquivos = grupos.flatMap((grupo) => Object.values(grupo.arquivos));
 
-    return Array.from(porSetor.values()).sort((a, b) => {
-      if ((a.processos.length > 0) !== (b.processos.length > 0)) return a.processos.length > 0 ? -1 : 1;
-      return a.nome.localeCompare(b.nome, 'pt-BR');
+    return TIPOS_DOCUMENTO.map((tipo) => {
+      const doTipo = arquivos.filter((arquivo) => arquivo.tipo === tipo.valor);
+      return {
+        ...tipo,
+        total: doTipo.length,
+        itens: [...doTipo]
+          .sort((a, b) => new Date(b.criado_em || 0) - new Date(a.criado_em || 0))
+          .slice(0, POR_COLUNA),
+      };
     });
   }, [grupos]);
 
-  const resumo = useMemo(() => {
-    const porTipo = Object.fromEntries(TIPOS_DOCUMENTO.map((t) => [t.valor, 0]));
-    grupos.forEach((g) => Object.keys(g.arquivos).forEach((tipo) => { porTipo[tipo] = (porTipo[tipo] || 0) + 1; }));
+  const completos = grupos.filter((g) => Object.keys(g.arquivos).length === TIPOS_DOCUMENTO.length).length;
+  const percentualCompletos = grupos.length ? Math.round((completos / grupos.length) * 100) : 0;
+  const nome = (profile?.nome ? nomeExibicao(profile.nome) : nomePorEmail(user?.email || '')).split(' ')[0];
 
-    return {
-      processos: grupos.length,
-      arquivos: Object.values(porTipo).reduce((soma, n) => soma + n, 0),
-      porTipo,
-      completos: grupos.filter((g) => Object.keys(g.arquivos).length === TIPOS_DOCUMENTO.length).length,
-      setoresComDocs: setores.filter((s) => s.processos.length > 0).length,
-      setoresTotal: setores.length,
-    };
-  }, [grupos, setores]);
+  function buscar(event) {
+    event.preventDefault();
+    const busca = termo.trim();
+    navigate(busca ? `/pops?busca=${encodeURIComponent(busca)}` : '/pops');
+  }
 
-  const recentes = useMemo(
-    () =>
-      normalizarDocumentos(documentos)
-        .filter((d) => d.criado_em)
-        .sort((a, b) => new Date(b.criado_em) - new Date(a.criado_em))
-        .slice(0, 6),
-    [documentos],
-  );
+  async function ver(documento) {
+    try {
+      await visualizarDocumento(documento);
+    } catch (error) {
+      notificar('erro', error.message);
+    }
+  }
 
-  const nome = primeiroNome(profile?.nome || nomePorEmail(user?.email || ''));
-  const percentualCompletos = resumo.processos ? Math.round((resumo.completos / resumo.processos) * 100) : 0;
+  async function baixar(documento) {
+    try {
+      await baixarDocumento(documento);
+    } catch (error) {
+      notificar('erro', error.message);
+    }
+  }
 
   return (
     <>
-      <header className="page-header inicio-cabecalho">
-        <div>
-          <h1>{saudacao()}{nome ? `, ${nome}` : ''}</h1>
-          <p>Este é o retrato da documentação de processos da Pedrasplast hoje.</p>
-        </div>
-        <Link className="btn btn-primary" to="/pops">
-          <FiFolder /> Abrir repositório
-        </Link>
-      </header>
+      <section className="inicio-hero">
+        <h1>{saudacao()}{nome ? `, ${nome}` : ''}</h1>
+        <p>Qual procedimento você precisa consultar?</p>
+
+        <form className="inicio-busca" onSubmit={buscar} role="search">
+          <FiSearch aria-hidden="true" />
+          <label htmlFor="inicio-busca" className="sr-only">Buscar processo</label>
+          <input
+            id="inicio-busca"
+            type="search"
+            value={termo}
+            onChange={(event) => setTermo(event.target.value)}
+            placeholder="Digite o nome do processo, o setor ou o número"
+            autoComplete="off"
+          />
+          <button type="submit" className="btn btn-success">Buscar</button>
+        </form>
+
+        {setoresComDocs.length > 0 && (
+          <nav className="inicio-setores" aria-label="Abrir setor no repositório">
+            <span>Setores:</span>
+            {setoresComDocs.map((setor) => (
+              <Link key={setor} to={`/pops?setor=${encodeURIComponent(setor)}`}>{setor}</Link>
+            ))}
+          </nav>
+        )}
+      </section>
 
       {erro && (
         <div className="estado-erro" role="alert">
@@ -163,149 +145,91 @@ function Inicio() {
         </div>
       )}
 
-      <section className="painel inicio-numeros" aria-label="Resumo">
-        <div className="inicio-numero">
-          <strong className="numero">{loading ? '–' : resumo.processos}</strong>
-          <span>processos documentados</span>
-        </div>
+      <div className="inicio-secao">
+        <h2>Publicados recentemente</h2>
+        <span>Os documentos mais novos de cada tipo</span>
+      </div>
 
-        <div className="inicio-numero">
-          <strong className="numero">{loading ? '–' : resumo.arquivos}</strong>
-          <span>arquivos publicados</span>
-          <div className="inicio-tipos">
-            {TIPOS_DOCUMENTO.map((tipo) => (
-              <span key={tipo.valor} className={`tipo-tag ${classeTipo(tipo.valor)}`}>
-                {tipo.nome} <b className="numero">{loading ? '–' : resumo.porTipo[tipo.valor] || 0}</b>
+      <div className="inicio-colunas">
+        {colunas.map((coluna) => (
+          <section
+            key={coluna.valor}
+            className="painel inicio-coluna"
+            style={{ '--cor-coluna': COR_TIPO[coluna.valor] }}
+            aria-labelledby={`coluna-${coluna.valor}`}
+          >
+            <div className="inicio-coluna__cab">
+              <h3 id={`coluna-${coluna.valor}`}>{coluna.nome}</h3>
+              <span>
+                <b className="numero">{loading ? '–' : coluna.total}</b> {coluna.total === 1 ? 'publicado' : 'publicados'}
               </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="inicio-numero">
-          <strong className="numero">
-            {loading ? '–' : resumo.setoresComDocs}
-            <small> de {resumo.setoresTotal}</small>
-          </strong>
-          <span>setores com documentos</span>
-        </div>
-
-        <div className="inicio-numero">
-          <strong className="numero">{loading ? '–' : `${percentualCompletos}%`}</strong>
-          <span>
-            dos processos com POP, Fluxograma e Manual
-            {!loading && resumo.processos > 0 && ` (${resumo.completos} de ${resumo.processos})`}
-          </span>
-        </div>
-      </section>
-
-      <div className="inicio-grade">
-        <section className="painel mapa" aria-labelledby="mapa-titulo">
-          <div className="painel__cabecalho">
-            <div>
-              <h2 id="mapa-titulo">Mapa de documentação</h2>
-              <p>Cada bloco é um processo; as faixas mostram quais documentos ele já tem.</p>
-            </div>
-            <div className="mapa__legenda" aria-hidden="true">
-              {TIPOS_DOCUMENTO.map((tipo) => (
-                <span key={tipo.valor} className={`tipo-tag ${classeTipo(tipo.valor)}`}>{tipo.nome}</span>
-              ))}
-            </div>
-          </div>
-
-          {loading ? (
-            <p className="mapa__vazio">Carregando documentos...</p>
-          ) : (
-            <ul className="mapa__setores">
-              {setores.filter((setor) => setor.processos.length > 0).map((setor) => (
-                <li key={setor.nome} className={`mapa__setor${setor.processos.length === 0 ? ' vazio' : ''}`}>
-                  <button
-                    type="button"
-                    className="mapa__nome"
-                    onClick={() => navigate(`/pops?setor=${encodeURIComponent(setor.nome)}`)}
-                    disabled={setor.processos.length === 0}
-                  >
-                    <strong>{setor.nome}</strong>
-                    <small className="numero">
-                      {setor.processos.length === 0
-                        ? 'Sem documentos'
-                        : `${setor.processos.length} ${setor.processos.length === 1 ? 'processo' : 'processos'}`}
-                    </small>
-                  </button>
-
-                  <div className="mapa__processos">
-                    {setor.processos.map((processo) => {
-                      const tipos = TIPOS_DOCUMENTO.filter((t) => processo.arquivos[t.valor]).map((t) => t.nome);
-                      return (
-                        <Link
-                          key={processo.id}
-                          className="mapa__processo"
-                          to={`/pops?setor=${encodeURIComponent(setor.nome)}`}
-                          title={`${processo.titulo}\n${tipos.length ? tipos.join(', ') : 'Sem arquivos'}`}
-                        >
-                          <span className="numero">{processo.codigo}</span>
-                          <span className="cobertura" aria-label={`${processo.titulo}: ${tipos.join(', ')}`}>
-                            {TIPOS_DOCUMENTO.map((tipo) => (
-                              <span
-                                key={tipo.valor}
-                                className={`cobertura__parte ${classeTipo(tipo.valor)}${processo.arquivos[tipo.valor] ? ' cheia' : ''}`}
-                              />
-                            ))}
-                          </span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </li>
-              ))}
-
-              {setores.some((setor) => setor.processos.length === 0) && (
-                <li className="mapa__sem-docs">
-                  <span>Setores ainda sem documentos</span>
-                  <div>
-                    {setores
-                      .filter((setor) => setor.processos.length === 0)
-                      .map((setor) => (
-                        <span key={setor.nome} className="mapa__setor-vazio">{setor.nome}</span>
-                      ))}
-                  </div>
-                </li>
-              )}
-            </ul>
-          )}
-        </section>
-
-        <div className="inicio-lateral">
-          {isAdmin && <PainelAdmin />}
-
-          <section className="painel recentes" aria-labelledby="recentes-titulo">
-            <div className="painel__cabecalho">
-              <h2 id="recentes-titulo">Publicados recentemente</h2>
             </div>
 
             {loading ? (
-              <p className="recentes__vazio">Carregando...</p>
-            ) : recentes.length === 0 ? (
-              <p className="recentes__vazio">Nenhum documento publicado ainda.</p>
+              <p className="inicio-coluna__vazio">Carregando...</p>
+            ) : coluna.itens.length === 0 ? (
+              <p className="inicio-coluna__vazio">Nenhum {coluna.nome} publicado ainda.</p>
             ) : (
-              <ul className="recentes__lista">
-                {recentes.map((doc) => (
+              <ul>
+                {coluna.itens.map((doc) => (
                   <li key={doc.id}>
-                    <Link to={`/pops?setor=${encodeURIComponent(doc.setor)}`}>
-                      <span className={`tipo-tag ${classeTipo(doc.tipo)}`}>
-                        {TIPOS_DOCUMENTO.find((t) => t.valor === doc.tipo)?.nome || doc.tipo}
-                      </span>
-                      <strong>{doc.codigo} - {doc.descricao}</strong>
-                      <small>
-                        {doc.setor}, {formatarData(doc.criado_em)}
-                      </small>
-                    </Link>
+                    <span className="inicio-coluna__cod numero">{doc.codigo}</span>
+                    <span className="inicio-coluna__texto">
+                      <strong title={doc.descricao}>{doc.descricao}</strong>
+                      <small>{doc.setor}, {quando(doc.criado_em)}</small>
+                    </span>
+                    <span className="inicio-coluna__acoes">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => ver(doc)}
+                        aria-label={`Visualizar ${coluna.nome} ${doc.codigo} - ${doc.descricao}`}
+                        title="Visualizar"
+                      >
+                        <FiEye />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => baixar(doc)}
+                        aria-label={`Baixar ${coluna.nome} ${doc.codigo} - ${doc.descricao}`}
+                        title="Baixar PDF"
+                      >
+                        <FiDownload />
+                      </button>
+                    </span>
                   </li>
                 ))}
               </ul>
             )}
+
+            <Link className="inicio-coluna__rodape" to={`/pops?tipo=${encodeURIComponent(coluna.valor)}`}>
+              Ver todos os {PLURAL_TIPO[coluna.valor]}
+            </Link>
           </section>
-        </div>
+        ))}
       </div>
+
+      <section className="painel inicio-resumo" aria-label="Resumo do repositório">
+        <span>
+          <b className="numero">{loading ? '–' : `${completos} de ${grupos.length}`}</b> processos com POP, Fluxograma e Manual
+        </span>
+        <span className="inicio-resumo__barra" aria-hidden="true">
+          <span style={{ width: `${percentualCompletos}%` }} />
+        </span>
+        <span className="inicio-resumo__sep" aria-hidden="true" />
+        <span>
+          <b className="numero">{loading ? '–' : `${setoresComDocs.length} de ${setoresAtivos.length || '–'}`}</b> setores com documentos
+        </span>
+        {isAdmin && pendentes > 0 && (
+          <>
+            <span className="inicio-resumo__sep" aria-hidden="true" />
+            <Link className="inicio-resumo__alerta" to="/admin/usuarios">
+              <b className="numero">{pendentes}</b> {pendentes === 1 ? 'pedido de acesso aguardando' : 'pedidos de acesso aguardando'}
+            </Link>
+          </>
+        )}
+      </section>
     </>
   );
 }
