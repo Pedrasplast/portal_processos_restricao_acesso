@@ -45,28 +45,13 @@ export function contarPendentes() {
   return rpc('contar_pendentes');
 }
 
-/** Pendentes primeiro; depois as mais recentes (limitado para economizar). */
-export async function listarSolicitacoes({ limite = 100 } = {}) {
-  const { data, error } = await supabase
-    .from('solicitacoes_acesso')
-    .select('id, user_id, nome, email, status, criado_em, decidido_em')
-    .order('criado_em', { ascending: false })
-    .limit(limite);
-
-  if (error) throw error;
-  return data || [];
-}
-
-export function decidirSolicitacao(id, status) {
-  return rpc('decidir_solicitacao', { p_id: id, p_status: status });
-}
-
 export function listarUsuarios() {
   return rpc('listar_usuarios_admin');
 }
 
 export const ACOES_ACESSO = {
   LIBERAR: 'LIBERAR',
+  NEGAR: 'NEGAR',
   REVOGAR: 'REVOGAR',
   BLOQUEAR: 'BLOQUEAR',
   DESBLOQUEAR: 'DESBLOQUEAR',

@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
+import { FeedbackProvider } from './context/FeedbackContext';
 import AccessRoute from './components/routes/AccessRoute';
 import AdminRoute from './components/routes/AdminRoute';
 import Home from './pages/Home/Home';
@@ -13,42 +14,44 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/cadastro" element={<Register />} />
+        <FeedbackProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/cadastro" element={<Register />} />
 
-          <Route
-            path="/"
-            element={
-              <AccessRoute>
-                <Home />
-              </AccessRoute>
-            }
-          />
+            <Route
+              path="/"
+              element={
+                <AccessRoute>
+                  <Home />
+                </AccessRoute>
+              }
+            />
 
-          <Route
-            path="/pops"
-            element={
-              <AccessRoute>
-                <Repository />
-              </AccessRoute>
-            }
-          />
+            <Route
+              path="/pops"
+              element={
+                <AccessRoute>
+                  <Repository />
+                </AccessRoute>
+              }
+            />
 
-          <Route path="/repositorio" element={<Navigate to="/pops" replace />} />
+            <Route path="/repositorio" element={<Navigate to="/pops" replace />} />
 
-          <Route
-            path="/admin"
-            element={
-              <AdminRoute>
-                <Admin />
-              </AdminRoute>
-            }
-          />
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <Admin />
+                </AdminRoute>
+              }
+            />
 
-          <Route path="/admin/pops" element={<Navigate to="/admin" replace />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            <Route path="/admin/pops" element={<Navigate to="/admin" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </FeedbackProvider>
       </AuthProvider>
     </BrowserRouter>
   );

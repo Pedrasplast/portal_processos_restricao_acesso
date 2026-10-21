@@ -1,9 +1,8 @@
-import { FiClock, FiFileText, FiUsers } from 'react-icons/fi';
+import { FiFileText, FiUsers } from 'react-icons/fi';
 
 const TABS = [
   { id: 'documentos', label: 'Gerenciar Documentos', icon: FiFileText },
   { id: 'usuarios', label: 'Usuários', icon: FiUsers },
-  { id: 'solicitacoes', label: 'Solicitações de Acesso', icon: FiClock },
 ];
 
 function AdminTabs({ tab, onChange, pendingCount }) {
@@ -20,8 +19,13 @@ function AdminTabs({ tab, onChange, pendingCount }) {
           >
             <Icon />
             <span>{item.label}</span>
-            {item.id === 'solicitacoes' && pendingCount > 0 && (
-              <strong className="admin-tab__badge">{pendingCount}</strong>
+            {item.id === 'usuarios' && pendingCount > 0 && (
+              <strong
+                className="admin-tab__badge"
+                title={`${pendingCount} pedido(s) de acesso aguardando aprovação`}
+              >
+                {pendingCount}
+              </strong>
             )}
           </button>
         );

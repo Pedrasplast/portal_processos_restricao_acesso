@@ -33,6 +33,8 @@ import {
   visualizarDocumento,
 } from '../../../utils/arquivos';
 
+import { useFeedback } from '../../../hooks/useFeedback';
+
 import {
   agruparDocumentos,
   formatarTituloProcesso,
@@ -57,8 +59,9 @@ function DocumentsPanel({
   loading,
   erro,
   onReload,
-  notify,
 }) {
+  const { notificar: notify, confirmar } = useFeedback();
+
   const [setor, setSetor] = useState('');
 
   const [
@@ -85,11 +88,6 @@ function DocumentsPanel({
     salvando,
     setSalvando,
   ] = useState(false);
-
-  const [
-    documentoExcluir,
-    setDocumentoExcluir,
-  ] = useState(null);
 
   const [
     busca,
@@ -472,30 +470,31 @@ function DocumentsPanel({
     }
   }
 
-  async function confirmarExclusao() {
-    if (!documentoExcluir) {
-      return;
+  async function abrirDocumento(documento) {
+    try {
+      await visualizarDocumento(documento);
+    } catch (error) {
+      notify('erro', error.message);
     }
+  }
+
+  async function excluir(documento) {
+    const confirmado = await confirmar({
+      titulo: 'Excluir documento',
+      mensagem: `O arquivo ${documento.tipo} da linha "${documento.tituloProcesso || documento.titulo}" será removido do repositório.`,
+      detalhe: 'O PDF também é apagado do armazenamento. Esta ação não pode ser desfeita.',
+      textoConfirmar: 'Excluir documento',
+      perigo: true,
+    });
+
+    if (!confirmado) return;
 
     try {
-      await excluirDocumento(
-        documentoExcluir,
-      );
-
-      notify(
-        'sucesso',
-        `${documentoExcluir.tipo} excluído com sucesso.`,
-      );
-
-      setDocumentoExcluir(null);
-
+      await excluirDocumento(documento);
+      notify('sucesso', `${documento.tipo} excluído com sucesso.`);
       await onReload();
     } catch (error) {
-      notify(
-        'erro',
-        error.message ||
-          'Erro ao excluir documento.',
-      );
+      notify('erro', error.message || 'Erro ao excluir documento.');
     }
   }
 
@@ -861,8 +860,11 @@ function DocumentsPanel({
         </div>
 
         {erro && (
-          <div className="alert erro">
-            {erro}
+          <div className="estado-erro" role="alert">
+            <span>{erro}</span>
+            <button type="button" className="btn btn-secondary" onClick={onReload}>
+              Tentar novamente
+            </button>
           </div>
         )}
 
@@ -991,7 +993,7 @@ function DocumentsPanel({
                                       type="button"
                                       className="btn document-view-button"
                                       onClick={() =>
-                                        visualizarDocumento(
+                                        abrirDocumento(
                                           documento,
                                         )
                                       }
@@ -1004,7 +1006,7 @@ function DocumentsPanel({
                                       type="button"
                                       className="btn btn-danger document-delete-button"
                                       onClick={() =>
-                                        setDocumentoExcluir(
+                                        excluir(
                                           documento,
                                         )
                                       }
@@ -1093,53 +1095,6 @@ function DocumentsPanel({
           )}
       </section>
 
-      {documentoExcluir && (
-        <div className="modal-backdrop">
-          <div className="modal-card">
-            <h3>
-              Confirmar exclusão
-            </h3>
-
-            <p>
-              Remover o arquivo{' '}
-              <strong>
-                {documentoExcluir.tipo}
-              </strong>{' '}
-              da linha{' '}
-              <strong>
-                {documentoExcluir.tituloProcesso ||
-                  documentoExcluir.titulo}
-              </strong>
-              ?
-            </p>
-
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() =>
-                  setDocumentoExcluir(
-                    null,
-                  )
-                }
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={
-                  confirmarExclusao
-                }
-              >
-                <FiTrash2 />
-                Excluir
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
