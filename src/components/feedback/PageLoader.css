@@ -4,16 +4,16 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  color: #64748b;
-  background: #f8fafc;
+  color: var(--texto-2);
+  background: var(--papel);
   font-size: 0.9rem;
 }
 
 .page-loader__spinner {
   width: 22px;
   height: 22px;
-  border: 3px solid #e2e8f0;
-  border-top-color: #0284c7;
+  border: 3px solid var(--linha);
+  border-top-color: var(--verde);
   border-radius: 50%;
   animation: page-loader-spin 0.8s linear infinite;
 }

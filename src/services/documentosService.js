@@ -27,7 +27,7 @@ const VALIDADE_LINK_SEGUNDOS = 300;
 export async function listarDocumentos() {
   const { data, error } = await supabase
     .from('pops')
-    .select('id, titulo, setor, tipo_documento, storage_path')
+    .select('id, titulo, setor, tipo_documento, storage_path, criado_em')
     .order('setor', { ascending: true })
     .order('titulo', { ascending: true });
 

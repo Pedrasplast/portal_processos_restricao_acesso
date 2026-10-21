@@ -1,20 +1,24 @@
-import { FiLogIn, FiLogOut, FiMenu, FiUser } from 'react-icons/fi';
+import { FiLogOut, FiMenu } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../hooks/useAuth';
-import { nomePorEmail } from '../../utils/texto';
-import './Navbar.css';
+import { nomeExibicao, nomePorEmail } from '../../utils/texto';
 
-function Navbar({ onMenu }) {
+function iniciais(nome = '') {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return '?';
+  const primeira = partes[0][0];
+  const ultima = partes.length > 1 ? partes[partes.length - 1][0] : '';
+  return `${primeira}${ultima}`.toUpperCase();
+}
+
+function Navbar({ onMenu, titulo }) {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, profile, isAdmin, logout } = useAuth();
 
-  async function handleAuth() {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+  const nome = profile?.nome ? nomeExibicao(profile.nome) : nomePorEmail(user?.email || '');
 
+  async function handleSair() {
     await logout();
     navigate('/login', { replace: true });
   }
@@ -25,28 +29,26 @@ function Navbar({ onMenu }) {
         <button className="topbar__menu" type="button" onClick={onMenu} aria-label="Abrir menu">
           <FiMenu />
         </button>
-        <img className='logo' src="/Logo_Pedrasplast.png" alt="Pedrasplast" />
+        <img className="topbar__logo" src="/Logo_Pedrasplast.png" alt="Pedrasplast" />
+        {titulo && <span className="topbar__titulo">{titulo}</span>}
       </div>
 
-      <div className="topbar__right">
-        {user && (
+      {user && (
+        <div className="topbar__right">
           <div className="topbar__user">
-            <span className="topbar__avatar" aria-hidden="true">
-              <FiUser />
+            <span className="topbar__avatar" aria-hidden="true">{iniciais(nome)}</span>
+            <span className="topbar__identidade">
+              <strong>{nome}</strong>
+              <small>{isAdmin ? 'Administrador' : 'Usuário'}</small>
             </span>
-            <span className="topbar__user-name">{nomePorEmail(user.email)}</span>
           </div>
-        )}
 
-        <button
-          type="button"
-          className="topbar__auth"
-          onClick={handleAuth}
-          aria-label={user ? 'Sair do sistema' : 'Entrar no sistema'}
-        >
-          {user ? <FiLogOut /> : <FiLogIn />}
-        </button>
-      </div>
+          <button type="button" className="btn btn-ghost topbar__sair" onClick={handleSair}>
+            <FiLogOut />
+            <span>Sair</span>
+          </button>
+        </div>
+      )}
     </header>
   );
 }
