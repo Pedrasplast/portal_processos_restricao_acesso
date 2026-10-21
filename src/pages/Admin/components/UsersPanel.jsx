@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FiRefreshCw, FiTrash2, FiUsers } from 'react-icons/fi';
+import { FiCheck, FiRefreshCw, FiSlash, FiUnlock, FiUserX, FiUsers } from 'react-icons/fi';
 
-import { listarUsuarios, revogarAcessoUsuario } from '../../../services/solicitacoesService';
+import {
+  ACOES_ACESSO,
+  definirAcessoUsuario,
+  listarUsuarios,
+} from '../../../services/solicitacoesService';
 
 function formatarData(valor) {
   if (!valor) return '—';
@@ -13,11 +17,34 @@ function formatarData(valor) {
   }).format(data);
 }
 
+/* Situação exibida na coluna "Acesso". */
+function situacao(usuario) {
+  if (usuario.regra === 'admin') return { rotulo: 'ADMIN', classe: 'aprovado' };
+  if (usuario.bloqueado) return { rotulo: 'BLOQUEADO', classe: 'negado' };
+  if (usuario.acesso_ativo) return { rotulo: 'LIBERADO', classe: 'aprovado' };
+  if (usuario.pedido_pendente) return { rotulo: 'PEDIDO PENDENTE', classe: 'pendente' };
+  return { rotulo: 'SEM ACESSO', classe: 'cancelado' };
+}
+
+const CONFIRMACOES = {
+  [ACOES_ACESSO.LIBERAR]: (nome) => `Liberar o acesso de ${nome}? Ele poderá entrar sem nova aprovação.`,
+  [ACOES_ACESSO.REVOGAR]: (nome) => `Revogar o acesso de ${nome}? Ele perde o acesso na hora e terá que pedir de novo.`,
+  [ACOES_ACESSO.BLOQUEAR]: (nome) => `Bloquear ${nome}? Ele perde o acesso e não conseguirá nem pedir aprovação.`,
+  [ACOES_ACESSO.DESBLOQUEAR]: (nome) => `Desbloquear ${nome}? Ele poderá voltar a pedir acesso.`,
+};
+
+const SUCESSO = {
+  [ACOES_ACESSO.LIBERAR]: 'liberado',
+  [ACOES_ACESSO.REVOGAR]: 'revogado',
+  [ACOES_ACESSO.BLOQUEAR]: 'bloqueado',
+  [ACOES_ACESSO.DESBLOQUEAR]: 'desbloqueado',
+};
+
 /*
- * Lista todos os usuários cadastrados (1 chamada RPC, sem polling).
- * "Acesso ativo" = tem uma sessão de login aprovada e ainda aberta.
+ * Aprovação única: o admin libera uma vez e o usuário entra em qualquer
+ * login até ser revogado ou bloqueado. 1 chamada para listar, sem polling.
  */
-function UsersPanel({ notify }) {
+function UsersPanel({ notify, onChanged }) {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processandoId, setProcessandoId] = useState(null);
@@ -37,20 +64,54 @@ function UsersPanel({ notify }) {
     void carregar();
   }, [carregar]);
 
-  async function revogar(usuario) {
+  async function executar(usuario, acao) {
     const nome = usuario.nome || usuario.email;
-    if (!window.confirm(`Deseja realmente revogar o acesso de ${nome}?`)) return;
+    if (!window.confirm(CONFIRMACOES[acao](nome))) return;
 
     setProcessandoId(usuario.id);
     try {
-      await revogarAcessoUsuario(usuario.id);
-      notify('sucesso', `Acesso de ${nome} revogado.`);
-      await carregar();
+      await definirAcessoUsuario(usuario.id, acao);
+      notify('sucesso', `${nome}: acesso ${SUCESSO[acao]}.`);
+      await Promise.all([carregar(), onChanged?.()]);
     } catch (error) {
-      notify('erro', `Erro ao revogar acesso: ${error.message || 'erro desconhecido'}`);
+      notify('erro', `Erro ao alterar acesso: ${error.message || 'erro desconhecido'}`);
     } finally {
       setProcessandoId(null);
     }
+  }
+
+  function botoes(usuario) {
+    if (usuario.regra === 'admin') return <span className="request-finished">—</span>;
+
+    const processando = processandoId === usuario.id;
+    const botao = (acao, rotulo, Icone, classe) => (
+      <button
+        key={acao}
+        type="button"
+        className={`btn ${classe}`}
+        disabled={processando}
+        onClick={() => executar(usuario, acao)}
+      >
+        <Icone /> {rotulo}
+      </button>
+    );
+
+    if (usuario.bloqueado) {
+      return (
+        <div className="request-actions">
+          {botao(ACOES_ACESSO.DESBLOQUEAR, 'Desbloquear', FiUnlock, 'btn-secondary')}
+        </div>
+      );
+    }
+
+    return (
+      <div className="request-actions">
+        {usuario.acesso_ativo
+          ? botao(ACOES_ACESSO.REVOGAR, 'Revogar', FiUserX, 'btn-secondary')
+          : botao(ACOES_ACESSO.LIBERAR, 'Liberar', FiCheck, 'btn-success')}
+        {botao(ACOES_ACESSO.BLOQUEAR, 'Bloquear', FiSlash, 'btn-danger')}
+      </div>
+    );
   }
 
   return (
@@ -61,7 +122,10 @@ function UsersPanel({ notify }) {
             <h3>
               <FiUsers /> Usuários
             </h3>
-            <p>Usuários cadastrados no portal e situação do acesso no login atual.</p>
+            <p>
+              Liberado entra sem nova aprovação. Revogar tira o acesso (pode pedir de novo).
+              Bloquear impede até de pedir.
+            </p>
           </div>
 
           <button type="button" className="btn btn-secondary" onClick={() => carregar()} disabled={loading}>
@@ -76,7 +140,7 @@ function UsersPanel({ notify }) {
                 <th>Usuário</th>
                 <th>Perfil</th>
                 <th>Último login</th>
-                <th>Última aprovação</th>
+                <th>Liberado em</th>
                 <th>Acesso</th>
                 <th>Ações</th>
               </tr>
@@ -89,8 +153,7 @@ function UsersPanel({ notify }) {
                 <tr><td colSpan="6" className="empty-state">Nenhum usuário cadastrado.</td></tr>
               ) : (
                 usuarios.map((usuario) => {
-                  const admin = usuario.regra === 'admin';
-                  const processando = processandoId === usuario.id;
+                  const { rotulo, classe } = situacao(usuario);
 
                   return (
                     <tr key={usuario.id}>
@@ -98,40 +161,13 @@ function UsersPanel({ notify }) {
                         <strong>{usuario.nome || '—'}</strong>
                         <small className="request-description">{usuario.email}</small>
                       </td>
-                      <td>{admin ? 'Administrador' : 'Usuário'}</td>
+                      <td>{usuario.regra === 'admin' ? 'Administrador' : 'Usuário'}</td>
                       <td>{formatarData(usuario.ultimo_login)}</td>
+                      <td>{usuario.regra === 'admin' ? '—' : formatarData(usuario.liberado_em)}</td>
                       <td>
-                        {formatarData(usuario.ultima_aprovacao)}
-                        {usuario.acessos_aprovados > 0 && (
-                          <small className="request-description">
-                            {usuario.acessos_aprovados} aprovação(ões)
-                          </small>
-                        )}
+                        <span className={`status-badge status-badge--${classe}`}>{rotulo}</span>
                       </td>
-                      <td>
-                        {admin ? (
-                          <span className="status-badge status-badge--aprovado">SEMPRE</span>
-                        ) : usuario.acesso_ativo ? (
-                          <span className="status-badge status-badge--aprovado">ATIVO</span>
-                        ) : (
-                          <span className="status-badge status-badge--cancelado">SEM ACESSO</span>
-                        )}
-                      </td>
-                      <td>
-                        {!admin && usuario.acesso_ativo ? (
-                          <button
-                            type="button"
-                            className="btn btn-danger"
-                            disabled={processando}
-                            onClick={() => revogar(usuario)}
-                          >
-                            <FiTrash2 />
-                            {processando ? 'Revogando...' : 'Revogar acesso'}
-                          </button>
-                        ) : (
-                          <span className="request-finished">—</span>
-                        )}
-                      </td>
+                      <td>{botoes(usuario)}</td>
                     </tr>
                   );
                 })

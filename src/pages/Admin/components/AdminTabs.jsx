@@ -2,7 +2,7 @@ import { FiClock, FiFileText, FiUsers } from 'react-icons/fi';
 
 const TABS = [
   { id: 'documentos', label: 'Gerenciar Documentos', icon: FiFileText },
-  { id: 'usuarios', label: 'Usuários com Acesso', icon: FiUsers },
+  { id: 'usuarios', label: 'Usuários', icon: FiUsers },
   { id: 'solicitacoes', label: 'Solicitações de Acesso', icon: FiClock },
 ];
 

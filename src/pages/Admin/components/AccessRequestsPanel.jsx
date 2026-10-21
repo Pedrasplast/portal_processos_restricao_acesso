@@ -80,7 +80,7 @@ function AccessRequestsPanel({ notify, pendingCount, onChanged }) {
       <div className="admin-card__header admin-card__header--actions">
         <div>
           <h3>Solicitações de Acesso</h3>
-          <p>Aprove ou negue cada tentativa de entrada de usuários comuns.</p>
+          <p>Aprovar libera o usuário de forma permanente (até ser revogado na aba Usuários).</p>
         </div>
         <button
           type="button"

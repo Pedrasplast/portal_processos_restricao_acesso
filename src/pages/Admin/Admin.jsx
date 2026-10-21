@@ -55,7 +55,7 @@ function Admin() {
         />
       )}
 
-      {tab === 'usuarios' && <UsersPanel notify={mostrarMensagem} />}
+      {tab === 'usuarios' && <UsersPanel notify={mostrarMensagem} onChanged={atualizarPendentes} />}
 
       {tab === 'solicitacoes' && (
         <AccessRequestsPanel

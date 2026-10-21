@@ -13,15 +13,18 @@ npm run dev
 
 ## Banco de dados (Supabase "Gestão de Processos")
 
-Toda a configuração está em `supabase/migrations/20261021_seguranca_acesso.sql`
-(rode no SQL Editor; pode ser executada mais de uma vez).
+A configuração está em `supabase/migrations/`, para rodar no SQL Editor nesta ordem
+(cada arquivo pode ser executado mais de uma vez):
+
+1. `20261021_seguranca_acesso.sql` — RLS, bucket privado, RPCs
+2. `20261021b_aprovacao_unica.sql` — aprovação única + bloqueio
 
 Tabelas:
 
 | Tabela | Uso |
 | --- | --- |
-| `profiles` | Um por usuário (criado automaticamente no cadastro). `regra` = `usuario` ou `admin`. |
-| `solicitacoes_acesso` | Um pedido por login, vinculado à sessão (`session_id`). |
+| `profiles` | Um por usuário (criado automaticamente no cadastro). `regra` = `usuario` ou `admin`; `acesso_liberado`, `bloqueado`. |
+| `solicitacoes_acesso` | Pedidos de acesso (histórico). No máximo um pendente por usuário. |
 | `pops` | Documentos: `titulo` (`01 - DESCRIÇÃO`), `setor`, `tipo_documento` (`POP`, `FLUXOGRAMA`, `MANUAL`), `storage_path`. |
 | `usuarios_pops` | Legado, não usado pelo front (só admin acessa). |
 
@@ -33,9 +36,11 @@ de 5 minutos para visualizar/baixar.
 A regra fica no banco (RLS), não só na tela:
 
 - Visitante sem login não lê nem grava nada.
-- Usuário comum só lê documentos/PDFs se tiver uma solicitação **APROVADA
-  para a sessão de login atual** e essa sessão ainda estiver aberta.
-  Novo login = nova aprovação. Logout ou "Revogar acesso" cortam na hora.
+- **Aprovação única:** o usuário comum pede acesso no primeiro login; quando
+  o admin aprova (ou clica em "Liberar" na aba Usuários), ele passa a entrar
+  em qualquer login/dispositivo sem nova aprovação.
+- "Revogar" tira o acesso na hora (o usuário pode pedir de novo).
+  "Bloquear" tira o acesso e impede novos pedidos até "Desbloquear".
 - Só admin publica e exclui documentos e PDFs.
 - Ninguém altera `profiles` pelo app (não dá para se promover a admin).
   Para tornar alguém admin:
@@ -45,13 +50,13 @@ A regra fica no banco (RLS), não só na tela:
 
 | Função | Quem | O que faz |
 | --- | --- | --- |
-| `status_acesso()` | todos | Status do login atual (`ADMIN`, `APROVADO`, `PENDENTE`, `NEGADO`, `CANCELADO` ou nulo) |
-| `solicitar_acesso()` | usuário | Cria/reaproveita o pedido desta sessão |
+| `status_acesso()` | todos | `ADMIN`, `APROVADO`, `BLOQUEADO`, `PENDENTE`, `NEGADO`, `CANCELADO` ou nulo |
+| `solicitar_acesso()` | usuário | Cria/reaproveita o pedido (ou responde `APROVADO`/`BLOQUEADO`) |
 | `cancelar_minha_solicitacao()` | usuário | Cancela o pedido pendente |
 | `contar_pendentes()` | admin | Número de pedidos pendentes |
-| `decidir_solicitacao(id, status)` | admin | Aprova ou nega |
+| `decidir_solicitacao(id, status)` | admin | Aprova (libera o usuário) ou nega o pedido |
 | `listar_usuarios_admin()` | admin | Usuários com situação de acesso |
-| `revogar_acesso_usuario(user_id)` | admin | Corta o acesso do usuário |
+| `definir_acesso_usuario(user_id, acao)` | admin | `LIBERAR`, `REVOGAR`, `BLOQUEAR`, `DESBLOQUEAR` |
 
 ### Economia de chamadas (plano free)
 
@@ -62,11 +67,10 @@ A regra fica no banco (RLS), não só na tela:
 - Perfil e status são carregados uma vez por login (não a cada troca de
   página ou renovação de token).
 - Download vai direto do Storage, sem passar pela memória do navegador.
-- Limpeza diária (`pg_cron`, 03:00): cancela pedidos de sessões encerradas
-  e apaga pedidos finalizados com mais de 90 dias.
+- Limpeza diária (`pg_cron`, 03:00): apaga pedidos finalizados com mais de 90 dias.
 
 ## Rotas
 
 - `/login`, `/cadastro` — públicas
-- `/` e `/pops` — exigem acesso aprovado
+- `/` e `/pops` — exigem acesso liberado
 - `/admin` — exige `profiles.regra = 'admin'`
