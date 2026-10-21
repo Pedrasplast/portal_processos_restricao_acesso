@@ -6,6 +6,7 @@ import {
   definirAcessoUsuario,
   listarUsuarios,
 } from '../../../services/solicitacoesService';
+import InvitesCard from './InvitesCard';
 
 function formatarData(valor) {
   if (!valor) return '—';
@@ -116,6 +117,8 @@ function UsersPanel({ notify, onChanged }) {
 
   return (
     <div className="admin-stack">
+      <InvitesCard notify={notify} />
+
       <section className="admin-card">
         <div className="admin-card__header admin-card__header--actions">
           <div>

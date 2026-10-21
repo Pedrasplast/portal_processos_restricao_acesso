@@ -18,6 +18,7 @@ A configuração está em `supabase/migrations/`, para rodar no SQL Editor nesta
 
 1. `20261021_seguranca_acesso.sql` — RLS, bucket privado, RPCs
 2. `20261021b_aprovacao_unica.sql` — aprovação única + bloqueio
+3. `20261021c_convites.sql` — convites por link
 
 Tabelas:
 
@@ -26,6 +27,7 @@ Tabelas:
 | `profiles` | Um por usuário (criado automaticamente no cadastro). `regra` = `usuario` ou `admin`; `acesso_liberado`, `bloqueado`. |
 | `solicitacoes_acesso` | Pedidos de acesso (histórico). No máximo um pendente por usuário. |
 | `pops` | Documentos: `titulo` (`01 - DESCRIÇÃO`), `setor`, `tipo_documento` (`POP`, `FLUXOGRAMA`, `MANUAL`), `storage_path`. |
+| `convites` | Links de convite (uso único, com validade). Sem acesso direto: só via funções. |
 | `usuarios_pops` | Legado, não usado pelo front (só admin acessa). |
 
 Bucket `pops`: **privado**, só PDF, até 20 MB. O front gera links assinados
@@ -41,6 +43,9 @@ A regra fica no banco (RLS), não só na tela:
   em qualquer login/dispositivo sem nova aprovação.
 - "Revogar" tira o acesso na hora (o usuário pode pedir de novo).
   "Bloquear" tira o acesso e impede novos pedidos até "Desbloquear".
+- **Convites:** na aba Usuários, "Gerar link de convite" cria um link
+  `/cadastro?convite=...` de uso único (1, 7 ou 30 dias, opcionalmente
+  preso a um e-mail). Quem se cadastra por ele já entra liberado.
 - Só admin publica e exclui documentos e PDFs.
 - Ninguém altera `profiles` pelo app (não dá para se promover a admin).
   Para tornar alguém admin:
@@ -57,6 +62,9 @@ A regra fica no banco (RLS), não só na tela:
 | `decidir_solicitacao(id, status)` | admin | Aprova (libera o usuário) ou nega o pedido |
 | `listar_usuarios_admin()` | admin | Usuários com situação de acesso |
 | `definir_acesso_usuario(user_id, acao)` | admin | `LIBERAR`, `REVOGAR`, `BLOQUEAR`, `DESBLOQUEAR` |
+| `criar_convite(email, dias)` | admin | Gera um link de convite |
+| `listar_convites()` / `cancelar_convite(id)` | admin | Lista / cancela convites |
+| `validar_convite(token)` | público | Diz se o link é válido (tela de cadastro) |
 
 ### Economia de chamadas (plano free)
 

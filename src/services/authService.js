@@ -32,6 +32,7 @@ export async function cadastrarConta({
   nome,
   email,
   senha,
+  convite = null,
 }) {
   const { data, error } =
     await supabase.auth.signUp({
@@ -42,6 +43,7 @@ export async function cadastrarConta({
       options: {
         data: {
           nome: nome.trim(),
+          ...(convite ? { convite } : {}),
         },
       },
     });
