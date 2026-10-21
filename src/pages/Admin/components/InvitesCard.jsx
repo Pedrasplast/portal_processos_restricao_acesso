@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FiCopy, FiLink, FiX } from 'react-icons/fi';
 
+import { useFeedback } from '../../../hooks/useFeedback';
 import {
   cancelarConvite,
   criarConvite,
@@ -50,7 +51,8 @@ async function copiarTexto(texto) {
  * Gera links de convite de uso único. Quem se cadastra pelo link já
  * entra liberado (sem aprovação). Carrega a lista 1x, sem polling.
  */
-function InvitesCard({ notify }) {
+function InvitesCard() {
+  const { notificar: notify, confirmar } = useFeedback();
   const [email, setEmail] = useState('');
   const [dias, setDias] = useState(7);
   const [gerando, setGerando] = useState(false);
@@ -75,7 +77,13 @@ function InvitesCard({ notify }) {
 
   async function copiar(link) {
     const ok = await copiarTexto(link);
-    notify(ok ? 'sucesso' : 'erro', ok ? 'Link copiado. Agora é só enviar ao usuário.' : 'Não foi possível copiar. Selecione o link e copie manualmente.');
+    notify(
+      ok ? 'sucesso' : 'aviso',
+      ok
+        ? 'Link copiado para a área de transferência. Agora é só enviar ao usuário.'
+        : 'Não foi possível copiar automaticamente. Selecione o link e copie manualmente.',
+      { titulo: ok ? 'Link copiado' : 'Copie manualmente' },
+    );
   }
 
   async function gerar(event) {
@@ -96,7 +104,17 @@ function InvitesCard({ notify }) {
   }
 
   async function cancelar(convite) {
-    if (!window.confirm('Cancelar este convite? O link deixará de funcionar.')) return;
+    const confirmado = await confirmar({
+      titulo: 'Cancelar convite',
+      mensagem: convite.email
+        ? `O convite para ${convite.email} deixará de funcionar.`
+        : 'Este link de convite deixará de funcionar.',
+      detalhe: 'Se precisar, você pode gerar um novo link depois.',
+      textoConfirmar: 'Cancelar convite',
+      textoCancelar: 'Voltar',
+      perigo: true,
+    });
+    if (!confirmado) return;
     try {
       await cancelarConvite(convite.id);
       if (ultimoLink.endsWith(convite.token)) setUltimoLink('');

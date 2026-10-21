@@ -33,9 +33,13 @@ import {
   normalizarChave,
 } from '../../utils/texto';
 
+import { useFeedback } from '../../hooks/useFeedback';
+
 import './Repository.css';
 
 function Repository() {
+  const { notificar } = useFeedback();
+
   const {
     documentos,
     loading,
@@ -74,8 +78,12 @@ function Repository() {
     );
   }, [grupos, setorSelecionado]);
 
-  function handleVisualizar(arquivo) {
-    visualizarDocumento(arquivo);
+  async function handleVisualizar(arquivo) {
+    try {
+      await visualizarDocumento(arquivo);
+    } catch (error) {
+      notificar('erro', error.message);
+    }
   }
 
   async function handleDownload(arquivo) {
@@ -87,6 +95,8 @@ function Repository() {
 
     try {
       await baixarDocumento(arquivo);
+    } catch (error) {
+      notificar('erro', error.message);
     } finally {
       setBaixandoId(null);
     }

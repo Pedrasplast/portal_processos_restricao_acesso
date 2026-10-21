@@ -20,6 +20,7 @@ A configuração está em `supabase/migrations/`, para rodar no SQL Editor nesta
 2. `20261021b_aprovacao_unica.sql` — aprovação única + bloqueio
 3. `20261021c_convites.sql` — convites por link
 4. `20261021d_excluir_usuario.sql` — excluir usuário pelo painel
+5. `20261021e_negar_pedido.sql` — negar pedido pela aba Usuários
 
 Tabelas:
 
@@ -39,9 +40,10 @@ de 5 minutos para visualizar/baixar.
 A regra fica no banco (RLS), não só na tela:
 
 - Visitante sem login não lê nem grava nada.
-- **Aprovação única:** o usuário comum pede acesso no primeiro login; quando
-  o admin aprova (ou clica em "Liberar" na aba Usuários), ele passa a entrar
-  em qualquer login/dispositivo sem nova aprovação.
+- **Aprovação única:** o usuário comum pede acesso no primeiro login; o pedido
+  aparece no topo da aba Usuários (com contador na aba) para "Aprovar" ou
+  "Negar". Aprovado (ou "Liberar"), ele entra em qualquer login/dispositivo
+  sem nova aprovação.
 - "Revogar" tira o acesso na hora (o usuário pode pedir de novo).
   "Excluir" apaga a conta (perfil e pedidos saem junto); se a pessoa se
   cadastrar de novo, precisa de nova aprovação. Administradores não podem
@@ -64,7 +66,7 @@ A regra fica no banco (RLS), não só na tela:
 | `contar_pendentes()` | admin | Número de pedidos pendentes |
 | `decidir_solicitacao(id, status)` | admin | Aprova (libera o usuário) ou nega o pedido |
 | `listar_usuarios_admin()` | admin | Usuários com situação de acesso |
-| `definir_acesso_usuario(user_id, acao)` | admin | `LIBERAR`, `REVOGAR`, `BLOQUEAR`, `DESBLOQUEAR` |
+| `definir_acesso_usuario(user_id, acao)` | admin | `LIBERAR`, `NEGAR`, `REVOGAR`, `BLOQUEAR`, `DESBLOQUEAR` |
 | `excluir_usuario(user_id)` | admin | Apaga a conta (não vale para admin nem para si mesmo) |
 | `criar_convite(email, dias)` | admin | Gera um link de convite |
 | `listar_convites()` / `cancelar_convite(id)` | admin | Lista / cancela convites |
@@ -80,6 +82,16 @@ A regra fica no banco (RLS), não só na tela:
   página ou renovação de token).
 - Download vai direto do Storage, sem passar pela memória do navegador.
 - Limpeza diária (`pg_cron`, 03:00): apaga pedidos finalizados com mais de 90 dias.
+
+## Mensagens e confirmações
+
+O site não usa `alert`/`confirm` do navegador. Use o hook `useFeedback()`:
+
+```js
+const { notificar, confirmar } = useFeedback();
+notificar('sucesso' | 'erro' | 'aviso' | 'info', 'Texto');
+if (await confirmar({ titulo, mensagem, detalhe, textoConfirmar, perigo: true })) { ... }
+```
 
 ## Rotas
 
