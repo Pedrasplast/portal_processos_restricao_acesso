@@ -1,26 +1,8 @@
-export const SETORES = [
-  'ALMOXARIFADO',
-  'COMPRAS',
-  'SETOR FISCAL',
-  'AUXILIAR ADM',
-  'FATURAMENTO',
-  'COMERCIAL',
-  'EXPORTAÇÃO',
-  'FINANCEIRO',
-  'LOGISTICA',
-  'PCP',
-  'MOLDE',
-  'CD - SP',
-  'PRODUÇÃO',
-  'SCOPI',
-  'QUALIDADE',
-  'RH',
-  'EXPEDIÇÃO',
-];
+/* Os setores ficam no banco (tabela setores) e são gerenciados em
+   Administração > Setores. */
 
 export const TIPOS_DOCUMENTO = [
   { valor: 'POP', nome: 'POP' },
   { valor: 'FLUXOGRAMA', nome: 'Fluxograma' },
   { valor: 'MANUAL', nome: 'Manual' },
-  
 ];

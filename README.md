@@ -21,6 +21,7 @@ A configuração está em `supabase/migrations/`, para rodar no SQL Editor nesta
 3. `20261021c_convites.sql` — convites por link
 4. `20261021d_excluir_usuario.sql` — excluir usuário pelo painel
 5. `20261021e_negar_pedido.sql` — negar pedido pela aba Usuários
+6. `20261021f_setores.sql` — cadastro de setores
 
 Tabelas:
 
@@ -29,6 +30,7 @@ Tabelas:
 | `profiles` | Um por usuário (criado automaticamente no cadastro). `regra` = `usuario` ou `admin`; `acesso_liberado`, `bloqueado`. |
 | `solicitacoes_acesso` | Pedidos de acesso (histórico). No máximo um pendente por usuário. |
 | `pops` | Documentos: `titulo` (`01 - DESCRIÇÃO`), `setor`, `tipo_documento` (`POP`, `FLUXOGRAMA`, `MANUAL`), `storage_path`. |
+| `setores` | Setores (nome único, ativo). Gerenciados em Administração > Setores. |
 | `convites` | Links de convite (uso único, com validade). Sem acesso direto: só via funções. |
 | `usuarios_pops` | Legado, não usado pelo front (só admin acessa). |
 
@@ -67,6 +69,9 @@ A regra fica no banco (RLS), não só na tela:
 | `decidir_solicitacao(id, status)` | admin | Aprova (libera o usuário) ou nega o pedido |
 | `listar_usuarios_admin()` | admin | Usuários com situação de acesso |
 | `definir_acesso_usuario(user_id, acao)` | admin | `LIBERAR`, `NEGAR`, `REVOGAR`, `BLOQUEAR`, `DESBLOQUEAR` |
+| `criar_setor(nome)` / `renomear_setor(id, nome)` | admin | Adiciona / renomeia (renomear atualiza os documentos) |
+| `definir_setor_ativo(id, ativo)` / `excluir_setor(id)` | admin | Desativa/reativa; exclui só setor sem documentos |
+| `listar_setores_admin()` | admin | Setores com contagem de processos e documentos |
 | `excluir_usuario(user_id)` | admin | Apaga a conta (não vale para admin nem para si mesmo) |
 | `criar_convite(email, dias)` | admin | Gera um link de convite |
 | `listar_convites()` / `cancelar_convite(id)` | admin | Lista / cancela convites |
@@ -96,8 +101,8 @@ if (await confirmar({ titulo, mensagem, detalhe, textoConfirmar, perigo: true })
 ## Rotas
 
 - `/login`, `/cadastro` — públicas
-- `/` (Início: resumo e mapa de documentação) e `/pops` (Repositório; aceita `?setor=`) — exigem acesso liberado
-- `/admin/documentos` e `/admin/usuarios` — exigem `profiles.regra = 'admin'` (`/admin` redireciona)
+- `/` (Início: busca e documentos recentes por tipo) e `/pops` (Repositório; aceita `?setor=`, `?busca=` e `?tipo=`) — exigem acesso liberado
+- `/admin/documentos`, `/admin/setores` e `/admin/usuarios` — exigem `profiles.regra = 'admin'` (`/admin` redireciona)
 
 ## Visual
 

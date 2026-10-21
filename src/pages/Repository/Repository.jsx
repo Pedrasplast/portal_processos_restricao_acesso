@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { FiDownload, FiEye, FiSearch } from 'react-icons/fi';
+import { FiDownload, FiEye, FiSearch, FiX } from 'react-icons/fi';
 import { useSearchParams } from 'react-router-dom';
 
 import AppLayout from '../../components/layout/AppLayout';
-import { SETORES, TIPOS_DOCUMENTO } from '../../config/documentos';
+import { TIPOS_DOCUMENTO } from '../../config/documentos';
 import { useDocumentos } from '../../hooks/useDocumentos';
 import { useFeedback } from '../../hooks/useFeedback';
 import { baixarDocumento, visualizarDocumento } from '../../utils/arquivos';
@@ -19,10 +19,17 @@ function Repository() {
   const { notificar } = useFeedback();
   const { documentos, loading, erro, recarregar } = useDocumentos();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [busca, setBusca] = useState('');
+  const [busca, setBusca] = useState(() => searchParams.get('busca') || '');
   const [baixandoId, setBaixandoId] = useState(null);
 
   const setorSelecionado = searchParams.get('setor') || TODOS;
+  const tipoSelecionado = TIPOS_DOCUMENTO.find((t) => t.valor === searchParams.get('tipo')) || null;
+
+  function limparTipo() {
+    const params = new URLSearchParams(searchParams);
+    params.delete('tipo');
+    setSearchParams(params, { replace: true });
+  }
 
   function escolherSetor(setor) {
     const params = new URLSearchParams(searchParams);
@@ -43,12 +50,11 @@ function Repository() {
     return mapa;
   }, [grupos]);
 
-  const setoresFiltro = useMemo(() => {
-    const extras = grupos
-      .map((g) => g.setor)
-      .filter((s) => !SETORES.some((c) => normalizarChave(c) === normalizarChave(s)));
-    return [...SETORES, ...new Set(extras)].filter((s) => contagemPorSetor.get(normalizarChave(s)));
-  }, [grupos, contagemPorSetor]);
+  /* Só setores que têm processos, em ordem alfabética. */
+  const setoresFiltro = useMemo(
+    () => [...new Set(grupos.map((g) => g.setor))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [grupos],
+  );
 
   const gruposFiltrados = useMemo(() => {
     const termo = normalizarChave(busca.trim());
@@ -56,10 +62,11 @@ function Repository() {
 
     return grupos.filter((grupo) => {
       if (setorSelecionado !== TODOS && normalizarChave(grupo.setor) !== setor) return false;
+      if (tipoSelecionado && !grupo.arquivos[tipoSelecionado.valor]) return false;
       if (!termo) return true;
       return normalizarChave(`${grupo.codigo} ${grupo.descricao} ${grupo.setor}`).includes(termo);
     });
-  }, [grupos, setorSelecionado, busca]);
+  }, [grupos, setorSelecionado, tipoSelecionado, busca]);
 
   async function handleVisualizar(arquivo) {
     try {
@@ -104,6 +111,16 @@ function Repository() {
               placeholder="Buscar por número ou descrição"
             />
           </label>
+
+          {tipoSelecionado && (
+            <div className="repo__tipo-ativo">
+              <span>Mostrando processos com</span>
+              <button type="button" className={`repo__tipo-chip tipo--${tipoSelecionado.valor.toLowerCase()}`} onClick={limparTipo}>
+                <span className="tipo-tag">{tipoSelecionado.nome}</span>
+                <FiX aria-label="Remover filtro de tipo" />
+              </button>
+            </div>
+          )}
 
           <div className="repo__setores" role="group" aria-label="Filtrar por setor">
             <button
@@ -215,6 +232,7 @@ function Repository() {
         {!loading && gruposFiltrados.length > 0 && (
           <p className="repo__rodape numero">
             {gruposFiltrados.length} {gruposFiltrados.length === 1 ? 'processo' : 'processos'}
+            {tipoSelecionado && ` com ${tipoSelecionado.nome}`}
             {setorSelecionado !== TODOS && ` em ${setorSelecionado}`}
           </p>
         )}
