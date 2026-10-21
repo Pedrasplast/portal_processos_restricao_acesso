@@ -1,137 +1,166 @@
-.login-page {
+/* =====================================================
+   ACESSO (login, espera, cadastro) — compartilhado
+   Faixa marinho no topo; cartão com a barra de três
+   cores dos tipos de documento.
+===================================================== */
+
+.login-page,
+.register-page {
   min-height: 100vh;
-  padding: 24px;
+  padding: 48px 20px;
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at top right, rgba(2, 132, 199, 0.12), transparent 35%),
-    #f8fafc;
+    linear-gradient(var(--marinho), var(--marinho)) top / 100% 42vh no-repeat,
+    var(--papel);
 }
 
-.login-card {
-  width: min(430px, 100%);
-  padding: 30px;
+.login-card,
+.register-card {
+  position: relative;
+  width: min(440px, 100%);
+  padding: 34px 32px 28px;
   display: grid;
-  gap: 18px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.1);
+  gap: 16px;
+  overflow: hidden;
+  background: var(--superficie);
+  border-radius: var(--raio-lg);
+  box-shadow: var(--sombra-flutuante);
 }
 
-.login-logo {
-  width: min(240px, 80%);
-  height: 60px;
+.register-card {
+  width: min(520px, 100%);
+}
+
+.login-card::before,
+.register-card::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--tipo-pop) 0 33.33%,
+    var(--tipo-fluxograma) 33.33% 66.66%,
+    var(--tipo-manual) 66.66% 100%
+  );
+}
+
+.login-logo,
+.register-logo {
+  width: 180px;
+  height: auto;
   margin: 0 auto 4px;
-  object-fit: contain;
+  display: block;
 }
 
 .login-heading-icon,
-.waiting-icon {
-  width: 48px;
-  height: 48px;
-  margin: 0 auto;
-  display: grid;
-  place-items: center;
-  color: #0284c7;
-  background: #e0f2fe;
-  border-radius: 12px;
-  font-size: 22px;
+.register-heading-icon {
+  display: none;
 }
 
-.login-card h1 {
+.login-card h1,
+.register-card h1 {
   margin: 0;
-  color: #0f172a;
   font-size: 1.45rem;
+  font-weight: 750;
   text-align: center;
 }
 
-.login-card > p {
-  margin: -8px 0 0;
-  color: #64748b;
-  font-size: 0.86rem;
-  line-height: 1.5;
+.login-card > p,
+.register-card > p {
+  margin: -6px 0 4px;
+  color: var(--texto-2);
+  font-size: 0.9rem;
   text-align: center;
 }
 
 .login-error {
   padding: 10px 12px;
-  color: #991b1b;
-  background: #fff1f2;
-  border: 1px solid #fecdd3;
-  border-radius: 8px;
-  font-size: 0.82rem;
+  color: var(--vermelho);
+  background: var(--vermelho-claro);
+  border: 1px solid #efc4c0;
+  border-radius: var(--raio);
+  font-size: 0.86rem;
+  font-weight: 600;
 }
 
-.login-full {
+.login-full,
+.register-full {
   width: 100%;
+  min-height: 44px;
+  font-size: 0.92rem;
 }
+
+.login-register {
+  padding-top: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  color: var(--texto-2);
+  border-top: 1px solid var(--linha);
+  font-size: 0.86rem;
+}
+
+.login-register a {
+  color: var(--marinho);
+  font-weight: 650;
+}
+
+/* ---------- aguardando aprovação ---------- */
 
 .login-card--waiting {
   text-align: center;
 }
 
+.waiting-icon {
+  width: 52px;
+  height: 52px;
+  margin: 4px auto 0;
+  display: grid;
+  place-items: center;
+  color: var(--ambar);
+  background: var(--ambar-claro);
+  border-radius: 50%;
+  font-size: 1.4rem;
+}
+
 .waiting-status {
-  min-height: 52px;
-  padding: 12px;
-  display: flex;
+  padding: 10px 12px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  color: #92400e;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: 9px;
-  font-size: 0.85rem;
-  font-weight: 750;
+  color: #7a4f0e;
+  background: var(--ambar-claro);
+  border-radius: var(--raio);
+  font-size: 0.86rem;
+  font-weight: 600;
 }
 
 .waiting-spinner {
-  width: 20px;
-  height: 20px;
-  border: 3px solid #fde68a;
-  border-top-color: #d97706;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f1d9a8;
+  border-top-color: var(--ambar);
   border-radius: 50%;
-  animation: waiting-spin 0.8s linear infinite;
+  animation: girar 0.9s linear infinite;
 }
 
-@keyframes waiting-spin {
-  to { transform: rotate(360deg); }
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 480px) {
-  .login-page {
-    padding: 14px;
+  .login-page,
+  .register-page {
+    padding: 28px 14px;
   }
 
-  .login-card {
-    padding: 22px 18px;
+  .login-card,
+  .register-card {
+    padding: 28px 20px 22px;
   }
-}
-
-.login-register {
-  margin-top: 18px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-
-  color: #64748b;
-
-  font-size: 0.82rem;
-}
-
-.login-register a {
-  color: #0284c7;
-
-  font-weight: 700;
-
-  text-decoration: none;
-}
-
-.login-register a:hover {
-  color: #0369a1;
-
-  text-decoration: underline;
 }

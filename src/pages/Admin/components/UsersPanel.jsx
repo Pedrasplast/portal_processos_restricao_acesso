@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiClock, FiRefreshCw, FiTrash2, FiUnlock, FiUserX, FiUsers, FiX } from 'react-icons/fi';
 
+import { useLayout } from '../../../components/layout/AppLayout';
 import { useFeedback } from '../../../hooks/useFeedback';
+import { nomeExibicao } from '../../../utils/texto';
 import {
   ACOES_ACESSO,
   definirAcessoUsuario,
@@ -15,18 +17,21 @@ function formatarData(valor) {
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return '—';
   return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(data);
 }
 
 /* Situação exibida na coluna "Acesso". */
 function situacao(usuario) {
-  if (usuario.regra === 'admin') return { rotulo: 'ADMIN', classe: 'aprovado' };
-  if (usuario.bloqueado) return { rotulo: 'BLOQUEADO', classe: 'negado' };
-  if (usuario.acesso_ativo) return { rotulo: 'LIBERADO', classe: 'aprovado' };
-  if (usuario.pedido_pendente) return { rotulo: 'AGUARDANDO APROVAÇÃO', classe: 'pendente' };
-  return { rotulo: 'SEM ACESSO', classe: 'cancelado' };
+  if (usuario.regra === 'admin') return { rotulo: 'Administrador', classe: 'admin' };
+  if (usuario.bloqueado) return { rotulo: 'Bloqueado', classe: 'negado' };
+  if (usuario.acesso_ativo) return { rotulo: 'Liberado', classe: 'aprovado' };
+  if (usuario.pedido_pendente) return { rotulo: 'Aguardando aprovação', classe: 'pendente' };
+  return { rotulo: 'Sem acesso', classe: 'cancelado' };
 }
 
 /* Pedidos pendentes primeiro; depois usuários comuns; admins no fim. */
@@ -76,8 +81,9 @@ const ACOES = {
  * (no topo da lista). 1 chamada para listar; recarrega quando a
  * contagem de pendentes muda.
  */
-function UsersPanel({ pendingCount, onChanged }) {
+function UsersPanel() {
   const { notificar, confirmar } = useFeedback();
+  const { pendentes: pendingCount, atualizarPendentes: onChanged } = useLayout();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processandoId, setProcessandoId] = useState(null);
@@ -105,7 +111,7 @@ function UsersPanel({ pendingCount, onChanged }) {
   const pendentes = useMemo(() => ordenados.filter((u) => ordem(u) === 0).length, [ordenados]);
 
   async function executar(usuario, acao) {
-    const nome = usuario.nome || usuario.email;
+    const nome = usuario.nome ? nomeExibicao(usuario.nome) : usuario.email;
     const textos = ACOES[acao];
 
     const confirmado = await confirmar({
@@ -130,7 +136,7 @@ function UsersPanel({ pendingCount, onChanged }) {
   }
 
   async function excluir(usuario) {
-    const nome = usuario.nome || usuario.email;
+    const nome = usuario.nome ? nomeExibicao(usuario.nome) : usuario.email;
 
     const confirmado = await confirmar({
       titulo: 'Excluir usuário',
@@ -154,14 +160,14 @@ function UsersPanel({ pendingCount, onChanged }) {
   }
 
   function botoes(usuario) {
-    if (usuario.regra === 'admin') return <span className="request-finished">—</span>;
+    if (usuario.regra === 'admin') return <span className="request-finished sem-acao">—</span>;
 
     const processando = processandoId === usuario.id;
     const botao = (acao, rotulo, Icone, classe) => (
       <button
         key={acao}
         type="button"
-        className={`btn ${classe}`}
+        className={`btn btn-sm ${classe}`}
         disabled={processando}
         onClick={() => executar(usuario, acao)}
       >
@@ -173,7 +179,7 @@ function UsersPanel({ pendingCount, onChanged }) {
       <button
         key="excluir"
         type="button"
-        className="btn btn-danger"
+        className="btn btn-sm btn-danger"
         disabled={processando}
         onClick={() => excluir(usuario)}
       >
@@ -218,29 +224,27 @@ function UsersPanel({ pendingCount, onChanged }) {
   }
 
   return (
-    <div className="admin-stack">
-      <InvitesCard />
-
-      <section className="admin-card">
-        <div className="admin-card__header admin-card__header--actions">
+    <div className="usuarios-layout">
+      <section className="painel" aria-labelledby="usuarios-titulo">
+        <div className="painel__cabecalho">
           <div>
-            <h3>
-              <FiUsers /> Usuários
-            </h3>
+            <h2 id="usuarios-titulo">
+              <FiUsers aria-hidden="true" /> Usuários
+            </h2>
             <p>
-              Aprove os pedidos de acesso, libere, revogue ou exclua usuários.
+              {usuarios.length} {usuarios.length === 1 ? 'conta cadastrada' : 'contas cadastradas'}.
               Quem é liberado entra sem nova aprovação.
             </p>
           </div>
 
-          <button type="button" className="btn btn-secondary" onClick={() => carregar()} disabled={loading}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => carregar()} disabled={loading}>
             <FiRefreshCw /> Atualizar
           </button>
         </div>
 
         {pendentes > 0 && (
           <div className="pedidos-aviso" role="status">
-            <FiClock />
+            <FiClock aria-hidden="true" />
             <span>
               {pendentes === 1
                 ? '1 pedido de acesso aguardando sua aprovação.'
@@ -250,40 +254,43 @@ function UsersPanel({ pendingCount, onChanged }) {
         )}
 
         <div className="table-wrapper">
-          <table className="data-table">
+          <table className="data-table tabela-usuarios">
             <thead>
               <tr>
                 <th>Usuário</th>
-                <th>Perfil</th>
-                <th>Último login</th>
-                <th>Liberado em</th>
                 <th>Acesso</th>
-                <th>Ações</th>
+                <th><span className="sr-only">Ações</span></th>
               </tr>
             </thead>
 
             <tbody>
               {loading && usuarios.length === 0 ? (
-                <tr><td colSpan="6" className="empty-state">Carregando usuários...</td></tr>
+                <tr><td colSpan="3" className="empty-state">Carregando usuários...</td></tr>
               ) : usuarios.length === 0 ? (
-                <tr><td colSpan="6" className="empty-state">Nenhum usuário cadastrado.</td></tr>
+                <tr><td colSpan="3" className="empty-state">Nenhum usuário cadastrado. Gere um convite para o primeiro acesso.</td></tr>
               ) : (
                 ordenados.map((usuario) => {
                   const { rotulo, classe } = situacao(usuario);
+                  const admin = usuario.regra === 'admin';
 
                   return (
                     <tr key={usuario.id} className={ordem(usuario) === 0 ? 'linha-pendente' : undefined}>
-                      <td>
-                        <strong>{usuario.nome || '—'}</strong>
-                        <small className="request-description">{usuario.email}</small>
+                      <td data-label="Usuário">
+                        <strong>{usuario.nome ? nomeExibicao(usuario.nome) : usuario.email}</strong>
+                        <small className="request-description">
+                          {usuario.nome ? usuario.email : 'Nome não informado'}
+                        </small>
+                        <small className="ultimo-login numero">
+                          {usuario.ultimo_login ? `Último login em ${formatarData(usuario.ultimo_login)}` : 'Ainda não entrou'}
+                        </small>
                       </td>
-                      <td>{usuario.regra === 'admin' ? 'Administrador' : 'Usuário'}</td>
-                      <td>{formatarData(usuario.ultimo_login)}</td>
-                      <td>{usuario.regra === 'admin' ? '—' : formatarData(usuario.liberado_em)}</td>
-                      <td>
+                      <td data-label="Acesso">
                         <span className={`status-badge status-badge--${classe}`}>{rotulo}</span>
+                        {!admin && usuario.acesso_ativo && usuario.liberado_em && (
+                          <small className="acesso-desde numero">desde {formatarData(usuario.liberado_em).split(',')[0]}</small>
+                        )}
                       </td>
-                      <td>{botoes(usuario)}</td>
+                      <td className="celula-acoes">{botoes(usuario)}</td>
                     </tr>
                   );
                 })
@@ -292,6 +299,10 @@ function UsersPanel({ pendingCount, onChanged }) {
           </table>
         </div>
       </section>
+
+      <aside className="usuarios-convites">
+        <InvitesCard />
+      </aside>
     </div>
   );
 }

@@ -7,7 +7,8 @@ import AdminRoute from './components/routes/AdminRoute';
 import Home from './pages/Home/Home';
 import Login from './pages/Login/Login';
 import Repository from './pages/Repository/Repository';
-import Admin from './pages/Admin/Admin';
+import DocumentosAdmin from './pages/Admin/DocumentosAdmin';
+import UsuariosAdmin from './pages/Admin/UsuariosAdmin';
 import Register from './pages/Register/Register';
 
 function App() {
@@ -39,16 +40,27 @@ function App() {
 
             <Route path="/repositorio" element={<Navigate to="/pops" replace />} />
 
+            <Route path="/admin" element={<Navigate to="/admin/documentos" replace />} />
+
             <Route
-              path="/admin"
+              path="/admin/documentos"
               element={
                 <AdminRoute>
-                  <Admin />
+                  <DocumentosAdmin />
                 </AdminRoute>
               }
             />
 
-            <Route path="/admin/pops" element={<Navigate to="/admin" replace />} />
+            <Route
+              path="/admin/usuarios"
+              element={
+                <AdminRoute>
+                  <UsuariosAdmin />
+                </AdminRoute>
+              }
+            />
+
+            <Route path="/admin/pops" element={<Navigate to="/admin/documentos" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </FeedbackProvider>

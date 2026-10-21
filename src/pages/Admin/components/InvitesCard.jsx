@@ -15,6 +15,13 @@ const OPCOES_VALIDADE = [
   { dias: 30, nome: '30 dias' },
 ];
 
+const NOME_SITUACAO = {
+  ABERTO: 'Aberto',
+  USADO: 'Usado',
+  CANCELADO: 'Cancelado',
+  EXPIRADO: 'Expirado',
+};
+
 const CLASSE_SITUACAO = {
   ABERTO: 'pendente',
   USADO: 'aprovado',
@@ -125,22 +132,22 @@ function InvitesCard() {
     }
   }
 
+  const abertos = convites.filter((c) => c.situacao === 'ABERTO');
+  const encerrados = convites.filter((c) => c.situacao !== 'ABERTO');
+
   return (
-    <section className="admin-card">
-      <div className="admin-card__header">
+    <section className="painel convites" aria-labelledby="convites-titulo">
+      <div className="painel__cabecalho">
         <div>
-          <h3>
-            <FiLink /> Convidar usuário
-          </h3>
-          <p>
-            Gere um link e envie para a pessoa. Quem se cadastrar por ele já entra liberado.
-            Cada link vale para um único cadastro.
-          </p>
+          <h2 id="convites-titulo">
+            <FiLink aria-hidden="true" /> Convidar usuário
+          </h2>
+          <p>Quem se cadastrar pelo link já entra liberado. Cada link vale para um cadastro.</p>
         </div>
       </div>
 
-      <form className="admin-form-grid invites-form" onSubmit={gerar}>
-        <div className="form-group admin-form-grid__double">
+      <form className="painel__corpo convites__form" onSubmit={gerar}>
+        <div className="form-group">
           <label htmlFor="invite-email">E-mail da pessoa (opcional)</label>
           <input
             id="invite-email"
@@ -148,107 +155,117 @@ function InvitesCard() {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="Se informar, só este e-mail poderá usar o link"
+            placeholder="nome@empresa.com.br"
             disabled={gerando}
           />
+          <p className="form-ajuda">Com e-mail, só essa pessoa consegue usar o link.</p>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="invite-days">Validade</label>
-          <select
-            id="invite-days"
-            className="form-control"
-            value={dias}
-            onChange={(event) => setDias(Number(event.target.value))}
-            disabled={gerando}
-          >
-            {OPCOES_VALIDADE.map((opcao) => (
-              <option key={opcao.dias} value={opcao.dias}>{opcao.nome}</option>
-            ))}
-          </select>
-        </div>
+        <div className="convites__linha">
+          <div className="form-group">
+            <label htmlFor="invite-days">Validade</label>
+            <select
+              id="invite-days"
+              className="form-control"
+              value={dias}
+              onChange={(event) => setDias(Number(event.target.value))}
+              disabled={gerando}
+            >
+              {OPCOES_VALIDADE.map((opcao) => (
+                <option key={opcao.dias} value={opcao.dias}>{opcao.nome}</option>
+              ))}
+            </select>
+          </div>
 
-        <div className="admin-form-grid__wide">
           <button type="submit" className="btn btn-primary" disabled={gerando}>
-            <FiLink /> {gerando ? 'Gerando...' : 'Gerar link de convite'}
+            <FiLink /> {gerando ? 'Gerando...' : 'Gerar link'}
           </button>
         </div>
+
+        {ultimoLink && (
+          <div className="convites__gerado">
+            <span>Link gerado e copiado</span>
+            <div>
+              <input
+                className="form-control"
+                type="text"
+                value={ultimoLink}
+                readOnly
+                onFocus={(event) => event.target.select()}
+                aria-label="Link de convite gerado"
+              />
+              <button type="button" className="btn btn-secondary" onClick={() => copiar(ultimoLink)} aria-label="Copiar link">
+                <FiCopy />
+              </button>
+            </div>
+          </div>
+        )}
       </form>
 
-      {ultimoLink && (
-        <div className="invite-link-box">
-          <input
-            className="form-control"
-            type="text"
-            value={ultimoLink}
-            readOnly
-            onFocus={(event) => event.target.select()}
-            aria-label="Link de convite gerado"
-          />
-          <button type="button" className="btn btn-secondary" onClick={() => copiar(ultimoLink)}>
-            <FiCopy /> Copiar
-          </button>
-        </div>
-      )}
+      <div className="convites__lista">
+        <h3>Convites em aberto</h3>
 
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Para</th>
-              <th>Criado em</th>
-              <th>Expira em</th>
-              <th>Situação</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && convites.length === 0 ? (
-              <tr><td colSpan="5" className="empty-state">Carregando convites...</td></tr>
-            ) : convites.length === 0 ? (
-              <tr><td colSpan="5" className="empty-state">Nenhum convite gerado.</td></tr>
-            ) : (
-              convites.map((convite) => {
-                const aberto = convite.situacao === 'ABERTO';
-                return (
-                  <tr key={convite.id}>
-                    <td>
-                      <strong>{convite.email || 'Qualquer e-mail'}</strong>
-                      {convite.usado_email && (
-                        <small className="request-description">Usado por {convite.usado_email}</small>
-                      )}
-                    </td>
-                    <td>{formatarData(convite.criado_em)}</td>
-                    <td>{formatarData(convite.expira_em)}</td>
-                    <td>
-                      <span className={`status-badge status-badge--${CLASSE_SITUACAO[convite.situacao] || 'cancelado'}`}>
-                        {convite.situacao}
-                      </span>
-                    </td>
-                    <td>
-                      {aberto ? (
-                        <div className="request-actions">
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() => copiar(montarLinkConvite(convite.token))}
-                          >
-                            <FiCopy /> Copiar link
-                          </button>
-                          <button type="button" className="btn btn-danger" onClick={() => cancelar(convite)}>
-                            <FiX /> Cancelar
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="request-finished">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+        {loading && convites.length === 0 ? (
+          <p className="convites__vazio">Carregando convites...</p>
+        ) : abertos.length === 0 ? (
+          <p className="convites__vazio">Nenhum convite em aberto.</p>
+        ) : (
+          <ul>
+            {abertos.map((convite) => (
+              <li key={convite.id} className="convite">
+                <div className="convite__info">
+                  <strong>{convite.email || 'Qualquer e-mail'}</strong>
+                  <small>Expira em {formatarData(convite.expira_em)}</small>
+                </div>
+                <div className="convite__acoes">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => copiar(montarLinkConvite(convite.token))}
+                    aria-label={`Copiar link do convite ${convite.email || ''}`}
+                    title="Copiar link"
+                  >
+                    <FiCopy />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm convite__cancelar"
+                    onClick={() => cancelar(convite)}
+                    aria-label={`Cancelar convite ${convite.email || ''}`}
+                    title="Cancelar convite"
+                  >
+                    <FiX />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {encerrados.length > 0 && (
+          <details className="convites__historico">
+            <summary>Últimos 30 dias ({encerrados.length})</summary>
+            <ul>
+              {encerrados.map((convite) => (
+                <li key={convite.id} className="convite">
+                  <div className="convite__info">
+                    <strong>{convite.usado_email || convite.email || 'Qualquer e-mail'}</strong>
+                    <small>
+                      {convite.situacao === 'USADO'
+                        ? `Usado em ${formatarData(convite.usado_em)}`
+                        : convite.situacao === 'CANCELADO'
+                          ? 'Cancelado'
+                          : `Expirou em ${formatarData(convite.expira_em)}`}
+                    </small>
+                  </div>
+                  <span className={`status-badge status-badge--${CLASSE_SITUACAO[convite.situacao] || 'cancelado'}`}>
+                    {NOME_SITUACAO[convite.situacao] || convite.situacao}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </div>
     </section>
   );

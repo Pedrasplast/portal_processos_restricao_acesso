@@ -57,7 +57,7 @@ function Login() {
     if (authLoading || !user) return;
 
     if (isAdmin) {
-      navigate('/admin', { replace: true });
+      navigate('/', { replace: true });
       return;
     }
 
@@ -101,7 +101,7 @@ function Login() {
       const perfil = await obterPerfil(usuario.id);
 
       if (perfil?.regra === 'admin') {
-        navigate('/admin', { replace: true });
+        navigate('/', { replace: true });
         return;
       }
 

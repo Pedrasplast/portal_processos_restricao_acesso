@@ -96,5 +96,12 @@ if (await confirmar({ titulo, mensagem, detalhe, textoConfirmar, perigo: true })
 ## Rotas
 
 - `/login`, `/cadastro` — públicas
-- `/` e `/pops` — exigem acesso liberado
-- `/admin` — exige `profiles.regra = 'admin'`
+- `/` (Início: resumo e mapa de documentação) e `/pops` (Repositório; aceita `?setor=`) — exigem acesso liberado
+- `/admin/documentos` e `/admin/usuarios` — exigem `profiles.regra = 'admin'` (`/admin` redireciona)
+
+## Visual
+
+- Cores da marca (marinho `#04154A`, verde `#25A55C`) e uma cor fixa por tipo de
+  documento: POP marinho, Fluxograma verde, Manual azul-aço. Tokens em
+  `src/styles/global.css`.
+- Fonte: Archivo (Google Fonts), com a largura variável marcando a hierarquia.
