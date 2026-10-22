@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  FiDownload,
   FiEye,
   FiFolder,
   FiPlus,
@@ -19,7 +20,7 @@ import {
   publicarDocumento,
   substituirDocumento,
 } from '../../../services/documentosService';
-import { visualizarDocumento } from '../../../utils/arquivos';
+import { baixarDocumento, visualizarDocumento } from '../../../utils/arquivos';
 import { agruparDocumentos, obterNumeracaoDocumento } from '../../../utils/documentos';
 import { normalizarChave } from '../../../utils/texto';
 
@@ -51,15 +52,18 @@ function NovoProcesso({ documentos, setoresAtivos, setorInicial, onFechar, onPub
   const [arquivo, setArquivo] = useState(null);
   const [salvando, setSalvando] = useState(false);
   const primeiroCampo = useRef(null);
+  const campoDescricao = useRef(null);
+  /* Aberto a partir de um setor: o setor já vem definido, sem lista. */
+  const setorFixo = Boolean(setorInicial);
 
   const proximoCodigo = setor ? obterNumeracaoDocumento(documentos, setor).proximoCodigo : '--';
 
   useEffect(() => {
-    primeiroCampo.current?.focus();
+    (setorFixo ? campoDescricao : primeiroCampo).current?.focus();
     const aoTeclar = (event) => event.key === 'Escape' && !salvando && onFechar();
     document.addEventListener('keydown', aoTeclar);
     return () => document.removeEventListener('keydown', aoTeclar);
-  }, [onFechar, salvando]);
+  }, [onFechar, salvando, setorFixo]);
 
   async function publicar(event) {
     event.preventDefault();
@@ -95,20 +99,30 @@ function NovoProcesso({ documentos, setoresAtivos, setorInicial, onFechar, onPub
         </div>
 
         <div className="gd-novo__corpo">
-          <div className="form-group">
-            <label htmlFor="gd-novo-setor">Setor</label>
-            <select
-              id="gd-novo-setor"
-              ref={primeiroCampo}
-              className="form-control"
-              value={setor}
-              onChange={(e) => setSetor(e.target.value)}
-              disabled={salvando}
-            >
-              <option value="" disabled>Selecione o setor</option>
-              {setoresAtivos.map((nome) => <option key={nome} value={nome}>{nome}</option>)}
-            </select>
-          </div>
+          {setorFixo ? (
+            <div className="gd-novo__setor">
+              <FiFolder aria-hidden="true" />
+              <span>
+                <small>Setor</small>
+                <strong>{setor}</strong>
+              </span>
+            </div>
+          ) : (
+            <div className="form-group">
+              <label htmlFor="gd-novo-setor">Setor</label>
+              <select
+                id="gd-novo-setor"
+                ref={primeiroCampo}
+                className="form-control"
+                value={setor}
+                onChange={(e) => setSetor(e.target.value)}
+                disabled={salvando}
+              >
+                <option value="" disabled>Selecione o setor</option>
+                {setoresAtivos.map((nome) => <option key={nome} value={nome}>{nome}</option>)}
+              </select>
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="gd-novo-descricao">Descrição do processo</label>
@@ -116,6 +130,7 @@ function NovoProcesso({ documentos, setoresAtivos, setorInicial, onFechar, onPub
               <span className="campo-descricao__codigo numero" aria-label="Número automático">{proximoCodigo}</span>
               <input
                 id="gd-novo-descricao"
+                ref={campoDescricao}
                 className="form-control"
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value.toLocaleUpperCase('pt-BR'))}
@@ -186,6 +201,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
   const [busca, setBusca] = useState('');
   const [mostrarVazios, setMostrarVazios] = useState(false);
   const [ocupado, setOcupado] = useState(null);
+  const [baixandoId, setBaixandoId] = useState(null);
   const [novo, setNovo] = useState(null);
   const inputArquivo = useRef(null);
   const acaoArquivo = useRef(null);
@@ -338,6 +354,18 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
       await visualizarDocumento(documento);
     } catch (error) {
       notificar('erro', error.message);
+    }
+  }
+
+  async function baixar(documento) {
+    if (baixandoId) return;
+    setBaixandoId(documento.id);
+    try {
+      await baixarDocumento(documento);
+    } catch (error) {
+      notificar('erro', error.message);
+    } finally {
+      setBaixandoId(null);
     }
   }
 
@@ -517,6 +545,16 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
                               title="Visualizar"
                             >
                               <FiEye />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm btn-icone"
+                              onClick={() => baixar(documento)}
+                              disabled={baixandoId === documento.id}
+                              aria-label={`Baixar ${t.nome} de ${grupo.titulo}`}
+                              title="Baixar PDF"
+                            >
+                              <FiDownload />
                             </button>
                             <button
                               type="button"
