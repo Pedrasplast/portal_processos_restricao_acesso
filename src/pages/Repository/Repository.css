@@ -1,114 +1,126 @@
 /* =====================================================
-   REPOSITÓRIO
+   REPOSITÓRIO — explorador por setor
+   Setores à esquerda (pastas); processos à direita com
+   os três documentos lado a lado.
 ===================================================== */
 
-.repo__filtros {
-  padding: 16px 20px;
+.explorador {
   display: grid;
-  gap: 12px;
-  border-bottom: 1px solid var(--linha);
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
 }
 
-.repo__filtros .campo-busca {
-  max-width: 420px;
+/* ---------- setores ---------- */
+
+.explorador__setores {
+  position: sticky;
+  top: calc(var(--topbar-height) + 20px);
 }
 
-.repo__setores {
+.explorador__busca {
+  padding: 12px 12px 4px;
+}
+
+.explorador__lista {
+  margin: 0;
+  padding: 6px 8px 10px;
+  list-style: none;
+}
+
+.explorador__setor {
+  width: 100%;
+  padding: 9px 12px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.repo__setor {
-  min-height: 32px;
-  padding: 5px 10px;
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   color: var(--texto-2);
-  background: var(--superficie);
-  border: 1px solid var(--linha);
-  border-radius: 999px;
-  font-size: 0.78rem;
+  background: transparent;
+  border: 0;
+  border-radius: var(--raio);
+  font-size: 0.86rem;
   font-weight: 600;
+  text-align: left;
 }
 
-.repo__setor span {
+.explorador__setor svg {
+  flex: 0 0 auto;
   color: var(--texto-3);
-  font-weight: 650;
 }
 
-.repo__setor:hover {
-  color: var(--marinho);
-  border-color: var(--linha-forte);
-}
-
-.repo__setor.ativo {
-  color: #fff;
-  background: var(--marinho);
-  border-color: var(--marinho);
-}
-
-.repo__setor.ativo span {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.repo__erro {
-  margin: 14px 20px 0;
-}
-
-.repo__tabela th.repo__col-tipo,
-.repo__tabela td.repo__col-tipo {
-  width: 150px;
-}
-
-.repo__processo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.repo__codigo {
-  min-width: 36px;
-  height: 28px;
-  display: inline-grid;
-  place-items: center;
-  color: var(--marinho);
-  background: var(--marinho-claro);
-  border-radius: var(--raio-sm);
-  font-size: 0.82rem;
-  font-weight: 750;
-}
-
-.repo__processo strong {
-  font-weight: 600;
-}
-
-.repo__setor-celula {
-  color: var(--texto-2);
-  font-size: 0.8rem;
+.explorador__setor span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.repo__acoes {
-  display: flex;
-  gap: 2px;
-}
-
-.repo__ausente {
+.explorador__setor b {
   color: var(--texto-3);
+  font-size: 0.76rem;
 }
 
-.repo__rodape {
-  margin: 0;
-  padding: 12px 20px;
+.explorador__setor:hover {
+  color: var(--marinho);
+  background: var(--superficie-2);
+}
+
+.explorador__setor.ativo {
+  color: var(--marinho);
+  background: var(--marinho-claro);
+}
+
+.explorador__setor.ativo svg {
+  color: var(--verde);
+}
+
+.explorador__setor.ativo b {
+  color: var(--marinho);
+}
+
+/* ---------- conteúdo ---------- */
+
+.explorador__cab {
+  align-items: center;
+}
+
+.explorador__cab h2 {
+  flex-wrap: wrap;
+}
+
+.explorador__qtd {
+  margin-left: 4px;
+  color: var(--texto-3);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.explorador__cobertura {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   color: var(--texto-2);
-  border-top: 1px solid var(--linha);
   font-size: 0.82rem;
+  white-space: nowrap;
 }
 
+.explorador__trilho {
+  width: 140px;
+  height: 8px;
+  overflow: hidden;
+  background: #e3e7ee;
+  border-radius: 4px;
+}
 
-.repo__tipo-ativo {
+.explorador__trilho span {
+  display: block;
+  height: 100%;
+  background: var(--verde);
+}
+
+.explorador__filtro-tipo {
+  padding: 12px 20px 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -116,73 +128,208 @@
   font-size: 0.84rem;
 }
 
-.repo__tipo-chip {
+.explorador__chip {
   padding: 4px 8px 4px 10px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  color: var(--texto-2);
   background: var(--marinho-claro);
   border: 1px solid var(--linha-forte);
   border-radius: 999px;
-  color: var(--texto-2);
 }
 
-.repo__tipo-chip:hover {
+.explorador__chip:hover {
   border-color: var(--marinho);
 }
 
-/* ---------- celular: cada processo vira um bloco ---------- */
+.explorador__erro {
+  margin: 14px 20px 0;
+}
 
-@media (max-width: 760px) {
-  .repo__setores {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    scrollbar-width: thin;
+.explorador__colunas,
+.explorador__processo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, 170px);
+  gap: 12px;
+  align-items: center;
+}
+
+.explorador__colunas {
+  margin-top: 12px;
+  padding: 10px 20px;
+  color: var(--texto-2);
+  background: var(--superficie-2);
+  border-top: 1px solid var(--linha);
+  border-bottom: 1px solid var(--linha);
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.explorador__cab + .explorador__colunas {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.explorador__vazio {
+  margin: 0;
+  padding: 40px 20px;
+  color: var(--texto-2);
+  text-align: center;
+}
+
+.explorador__processos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.explorador__processo {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--linha);
+}
+
+.explorador__processo:last-child {
+  border-bottom: 0;
+}
+
+.explorador__titulo {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.explorador__titulo > span:last-child {
+  min-width: 0;
+  display: grid;
+}
+
+.explorador__titulo strong {
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.explorador__titulo small {
+  color: var(--texto-2);
+  font-size: 0.76rem;
+}
+
+.explorador__cod {
+  flex: 0 0 auto;
+  min-width: 38px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--marinho);
+  background: var(--marinho-claro);
+  border-radius: var(--raio-sm);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.explorador__doc {
+  height: 44px;
+  padding: 0 6px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-left: 3px solid var(--cor-tipo);
+  border-radius: var(--raio);
+}
+
+.explorador__doc-tipo {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.explorador__ver {
+  background: var(--superficie-2);
+}
+
+.explorador__doc.vazio {
+  color: var(--texto-3);
+  background: transparent;
+  border-style: dashed;
+  border-left: 3px dashed var(--linha-forte);
+  font-size: 0.8rem;
+}
+
+/* ---------- responsivo ---------- */
+
+@media (max-width: 1280px) {
+  .explorador__colunas,
+  .explorador__processo {
+    grid-template-columns: minmax(0, 1fr) repeat(3, 150px);
+  }
+}
+
+@media (max-width: 1100px) {
+  .explorador {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .repo__setor {
-    flex: 0 0 auto;
+  .explorador__setores {
+    position: static;
   }
 
-  .repo__tabela thead {
+  /* setores viram uma faixa rolável */
+  .explorador__setores .painel__cabecalho {
     display: none;
   }
 
-  .repo__tabela,
-  .repo__tabela tbody,
-  .repo__tabela tr,
-  .repo__tabela td {
-    display: block;
-    width: 100% !important;
-  }
-
-  .repo__tabela tr {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--linha);
-  }
-
-  .repo__tabela td {
-    padding: 0;
-    border: 0;
-  }
-
-  .repo__setor-celula {
-    margin: 4px 0 10px 48px;
-  }
-
-  .repo__tabela td.repo__col-tipo {
-    padding: 6px 0 6px 48px;
+  .explorador__lista {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-top: 1px dashed var(--linha);
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 12px 12px;
   }
 
-  .repo__tabela td.repo__col-tipo::before {
-    content: attr(data-label);
-    color: var(--texto-2);
-    font-size: 0.82rem;
-    font-weight: 600;
+  .explorador__lista li {
+    flex: 0 0 auto;
+  }
+
+  .explorador__setor {
+    padding: 7px 12px;
+    border: 1px solid var(--linha);
+    border-radius: 999px;
+  }
+
+  .explorador__setor.ativo {
+    border-color: var(--marinho);
+  }
+
+  .explorador__setor svg {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .explorador__colunas {
+    display: none;
+  }
+
+  .explorador__processo {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  .explorador__titulo {
+    margin-bottom: 2px;
+  }
+
+  .explorador__cab {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .explorador__trilho {
+    width: 120px;
   }
 }

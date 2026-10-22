@@ -1,13 +1,10 @@
-import { useMemo, useState } from 'react';
-import { FiDownload, FiEye, FiSearch } from 'react-icons/fi';
-import { Link, useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 
 import AppLayout, { useLayout } from '../../components/layout/AppLayout';
 import { TIPOS_DOCUMENTO } from '../../config/documentos';
 import { useAuth } from '../../hooks/useAuth';
 import { useDocumentosPublicos } from '../../hooks/useDocumentosPublicos';
-import { useFeedback } from '../../hooks/useFeedback';
-import { baixarDocumento, visualizarDocumento } from '../../utils/arquivos';
 import { agruparDocumentos } from '../../utils/documentos';
 import { nomeExibicao, nomePorEmail } from '../../utils/texto';
 import './Home.css';
@@ -18,12 +15,6 @@ const COR_TIPO = {
   POP: 'var(--tipo-pop)',
   FLUXOGRAMA: 'var(--tipo-fluxograma)',
   MANUAL: 'var(--tipo-manual)',
-};
-
-const PLURAL_TIPO = {
-  POP: 'POPs',
-  FLUXOGRAMA: 'Fluxogramas',
-  MANUAL: 'Manuais',
 };
 
 function saudacao() {
@@ -48,20 +39,18 @@ function quando(valor) {
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(data).replace('.', '');
 }
 
+/*
+ * Início só visual: resumo do repositório e o que foi publicado por
+ * último. Para abrir ou baixar documentos, o caminho é o Repositório.
+ */
 function Inicio() {
-  const navigate = useNavigate();
-  const { notificar } = useFeedback();
   const { user, profile, isAdmin } = useAuth();
   const { pendentes } = useLayout();
   const { documentos, setoresAtivos, loading, erro, recarregar } = useDocumentosPublicos();
-  const [termo, setTermo] = useState('');
 
   const grupos = useMemo(() => agruparDocumentos(documentos), [documentos]);
 
-  const setoresComDocs = useMemo(
-    () => [...new Set(grupos.map((g) => g.setor))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
-    [grupos],
-  );
+  const setoresComDocs = useMemo(() => new Set(grupos.map((g) => g.setor)).size, [grupos]);
 
   /* Mais recentes de cada tipo. Os arquivos agrupados já trazem a
      descrição única do processo e o código. */
@@ -80,60 +69,49 @@ function Inicio() {
     });
   }, [grupos]);
 
+  const totalArquivos = colunas.reduce((soma, c) => soma + c.total, 0);
   const completos = grupos.filter((g) => Object.keys(g.arquivos).length === TIPOS_DOCUMENTO.length).length;
   const percentualCompletos = grupos.length ? Math.round((completos / grupos.length) * 100) : 0;
   const nome = (profile?.nome ? nomeExibicao(profile.nome) : nomePorEmail(user?.email || '')).split(' ')[0];
-
-  function buscar(event) {
-    event.preventDefault();
-    const busca = termo.trim();
-    navigate(busca ? `/pops?busca=${encodeURIComponent(busca)}` : '/pops');
-  }
-
-  async function ver(documento) {
-    try {
-      await visualizarDocumento(documento);
-    } catch (error) {
-      notificar('erro', error.message);
-    }
-  }
-
-  async function baixar(documento) {
-    try {
-      await baixarDocumento(documento);
-    } catch (error) {
-      notificar('erro', error.message);
-    }
-  }
+  const valor = (n) => (loading ? '–' : n);
 
   return (
     <>
       <section className="inicio-hero">
-        <h1>{saudacao()}{nome ? `, ${nome}` : ''}</h1>
-        <p>Qual procedimento você precisa consultar?</p>
+        <div className="inicio-hero__texto">
+          <h1>{saudacao()}{nome ? `, ${nome}` : ''}</h1>
+          <p>Este é o panorama da documentação de processos da Pedrasplast.</p>
+          {isAdmin && pendentes > 0 && (
+            <Link className="inicio-hero__aviso" to="/admin/usuarios">
+              {pendentes === 1 ? '1 pedido de acesso aguardando aprovação' : `${pendentes} pedidos de acesso aguardando aprovação`}
+            </Link>
+          )}
+        </div>
 
-        <form className="inicio-busca" onSubmit={buscar} role="search">
-          <FiSearch aria-hidden="true" />
-          <label htmlFor="inicio-busca" className="sr-only">Buscar processo</label>
-          <input
-            id="inicio-busca"
-            type="search"
-            value={termo}
-            onChange={(event) => setTermo(event.target.value)}
-            placeholder="Digite o nome do processo, o setor ou o número"
-            autoComplete="off"
-          />
-          <button type="submit" className="btn btn-success">Buscar</button>
-        </form>
-
-        {setoresComDocs.length > 0 && (
-          <nav className="inicio-setores" aria-label="Abrir setor no repositório">
-            <span>Setores:</span>
-            {setoresComDocs.map((setor) => (
-              <Link key={setor} to={`/pops?setor=${encodeURIComponent(setor)}`}>{setor}</Link>
-            ))}
-          </nav>
-        )}
+        <dl className="inicio-numeros">
+          <div>
+            <dt>Processos</dt>
+            <dd className="numero">{valor(grupos.length)}</dd>
+          </div>
+          <div>
+            <dt>Documentos</dt>
+            <dd className="numero">{valor(totalArquivos)}</dd>
+          </div>
+          <div>
+            <dt>Setores com documentos</dt>
+            <dd className="numero">
+              {valor(setoresComDocs)}
+              <small> de {setoresAtivos.length || '–'}</small>
+            </dd>
+          </div>
+          <div>
+            <dt>Processos completos</dt>
+            <dd className="numero">{valor(`${percentualCompletos}%`)}</dd>
+            <span className="inicio-numeros__barra" aria-hidden="true">
+              <span style={{ width: `${percentualCompletos}%` }} />
+            </span>
+          </div>
+        </dl>
       </section>
 
       {erro && (
@@ -159,7 +137,7 @@ function Inicio() {
             <div className="inicio-coluna__cab">
               <h3 id={`coluna-${coluna.valor}`}>{coluna.nome}</h3>
               <span>
-                <b className="numero">{loading ? '–' : coluna.total}</b> {coluna.total === 1 ? 'publicado' : 'publicados'}
+                <b className="numero">{valor(coluna.total)}</b> {coluna.total === 1 ? 'publicado' : 'publicados'}
               </span>
             </div>
 
@@ -174,60 +152,17 @@ function Inicio() {
                     <span className="inicio-coluna__cod numero">{doc.codigo}</span>
                     <span className="inicio-coluna__texto">
                       <strong title={doc.descricao}>{doc.descricao}</strong>
-                      <small>{doc.setor}, {quando(doc.criado_em)}</small>
+                      <small>{doc.setor}</small>
                     </span>
-                    <span className="inicio-coluna__acoes">
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => ver(doc)}
-                        aria-label={`Visualizar ${coluna.nome} ${doc.codigo} - ${doc.descricao}`}
-                        title="Visualizar"
-                      >
-                        <FiEye />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => baixar(doc)}
-                        aria-label={`Baixar ${coluna.nome} ${doc.codigo} - ${doc.descricao}`}
-                        title="Baixar PDF"
-                      >
-                        <FiDownload />
-                      </button>
-                    </span>
+                    <span className="inicio-coluna__data">{quando(doc.criado_em)}</span>
                   </li>
                 ))}
               </ul>
             )}
 
-            <Link className="inicio-coluna__rodape" to={`/pops?tipo=${encodeURIComponent(coluna.valor)}`}>
-              Ver todos os {PLURAL_TIPO[coluna.valor]}
-            </Link>
           </section>
         ))}
       </div>
-
-      <section className="painel inicio-resumo" aria-label="Resumo do repositório">
-        <span>
-          <b className="numero">{loading ? '–' : `${completos} de ${grupos.length}`}</b> processos com POP, Fluxograma e Manual
-        </span>
-        <span className="inicio-resumo__barra" aria-hidden="true">
-          <span style={{ width: `${percentualCompletos}%` }} />
-        </span>
-        <span className="inicio-resumo__sep" aria-hidden="true" />
-        <span>
-          <b className="numero">{loading ? '–' : `${setoresComDocs.length} de ${setoresAtivos.length || '–'}`}</b> setores com documentos
-        </span>
-        {isAdmin && pendentes > 0 && (
-          <>
-            <span className="inicio-resumo__sep" aria-hidden="true" />
-            <Link className="inicio-resumo__alerta" to="/admin/usuarios">
-              <b className="numero">{pendentes}</b> {pendentes === 1 ? 'pedido de acesso aguardando' : 'pedidos de acesso aguardando'}
-            </Link>
-          </>
-        )}
-      </section>
     </>
   );
 }
