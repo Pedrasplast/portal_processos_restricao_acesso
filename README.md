@@ -23,6 +23,7 @@ A configuração está em `supabase/migrations/`, para rodar no SQL Editor nesta
 5. `20261021e_negar_pedido.sql` — negar pedido pela aba Usuários
 6. `20261021f_setores.sql` — cadastro de setores
 7. `20261021g_setor_desativado_oculta.sql` — setor desativado oculta seus documentos
+8. `20261022_substituir_pdf.sql` — admin pode substituir o PDF de um documento
 
 Tabelas:
 
