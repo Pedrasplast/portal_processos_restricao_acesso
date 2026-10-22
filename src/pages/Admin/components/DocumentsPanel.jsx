@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  FiDownload,
   FiEye,
   FiFolder,
   FiPlus,
@@ -19,7 +20,7 @@ import {
   publicarDocumento,
   substituirDocumento,
 } from '../../../services/documentosService';
-import { visualizarDocumento } from '../../../utils/arquivos';
+import { baixarDocumento, visualizarDocumento } from '../../../utils/arquivos';
 import { agruparDocumentos, obterNumeracaoDocumento } from '../../../utils/documentos';
 import { normalizarChave } from '../../../utils/texto';
 
@@ -200,6 +201,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
   const [busca, setBusca] = useState('');
   const [mostrarVazios, setMostrarVazios] = useState(false);
   const [ocupado, setOcupado] = useState(null);
+  const [baixandoId, setBaixandoId] = useState(null);
   const [novo, setNovo] = useState(null);
   const inputArquivo = useRef(null);
   const acaoArquivo = useRef(null);
@@ -352,6 +354,18 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
       await visualizarDocumento(documento);
     } catch (error) {
       notificar('erro', error.message);
+    }
+  }
+
+  async function baixar(documento) {
+    if (baixandoId) return;
+    setBaixandoId(documento.id);
+    try {
+      await baixarDocumento(documento);
+    } catch (error) {
+      notificar('erro', error.message);
+    } finally {
+      setBaixandoId(null);
     }
   }
 
@@ -531,6 +545,16 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
                               title="Visualizar"
                             >
                               <FiEye />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm btn-icone"
+                              onClick={() => baixar(documento)}
+                              disabled={baixandoId === documento.id}
+                              aria-label={`Baixar ${t.nome} de ${grupo.titulo}`}
+                              title="Baixar PDF"
+                            >
+                              <FiDownload />
                             </button>
                             <button
                               type="button"

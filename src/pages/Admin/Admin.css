@@ -703,7 +703,7 @@
 .gd-colunas,
 .gd-processo {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) repeat(3, 190px);
+  grid-template-columns: minmax(0, 1fr) repeat(3, 214px);
   gap: 12px;
   align-items: center;
 }
@@ -818,7 +818,7 @@
 }
 
 .gd-doc__acoes .btn-icone {
-  width: 28px;
+  width: 27px;
   height: 28px;
   min-height: 28px;
 }
@@ -956,7 +956,7 @@
 @media (max-width: 1280px) {
   .gd-colunas,
   .gd-processo {
-    grid-template-columns: minmax(0, 1fr) repeat(3, 172px);
+    grid-template-columns: minmax(0, 1fr) repeat(3, 200px);
   }
 }
 
