@@ -102,7 +102,7 @@ if (await confirmar({ titulo, mensagem, detalhe, textoConfirmar, perigo: true })
 ## Rotas
 
 - `/login`, `/cadastro` — públicas
-- `/` (Início: busca e documentos recentes por tipo) e `/pops` (Repositório; aceita `?setor=`, `?busca=` e `?tipo=`) — exigem acesso liberado
+- `/` (Início: panorama e documentos recentes por tipo, só visual) e `/pops` (Repositório em formato explorador por setor; aceita `?setor=`, `?busca=` e `?tipo=`) — exigem acesso liberado
 - `/admin/documentos`, `/admin/setores` e `/admin/usuarios` — exigem `profiles.regra = 'admin'` (`/admin` redireciona)
 
 ## Visual
