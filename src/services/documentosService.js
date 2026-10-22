@@ -162,6 +162,48 @@ async function prepararPublicacao({
   };
 }
 
+const LIMITE_MB = 20;
+
+/* Valida o arquivo antes de enviar (o bucket também recusa). */
+function validarPdf(arquivo) {
+  const ehPdf =
+    arquivo?.type === 'application/pdf' ||
+    arquivo?.name?.toLowerCase().endsWith('.pdf');
+
+  if (!ehPdf) {
+    throw new Error('O arquivo selecionado deve estar em PDF.');
+  }
+
+  if (arquivo.size > LIMITE_MB * 1024 * 1024) {
+    throw new Error(`O PDF passa de ${LIMITE_MB} MB. Reduza o arquivo e tente novamente.`);
+  }
+}
+
+function montarCaminho({ setor, codigo, tipo, nomeArquivo }) {
+  const identificador =
+    globalThis.crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  return [
+    'pdfs',
+    setor,
+    codigo,
+    tipo,
+    `${identificador}-${sanitizarNomeArquivo(nomeArquivo)}`,
+  ].join('/');
+}
+
+async function enviarArquivo(caminho, arquivo) {
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(caminho, arquivo, {
+      contentType: 'application/pdf',
+      upsert: false,
+    });
+
+  if (error) throw error;
+}
+
 export async function publicarDocumento({
   setor,
   tipoDocumento,
@@ -169,15 +211,7 @@ export async function publicarDocumento({
   descricao,
   arquivo,
 }) {
-  const ehPdf =
-    arquivo?.type === 'application/pdf' ||
-    arquivo?.name?.toLowerCase().endsWith('.pdf');
-
-  if (!ehPdf) {
-    throw new Error(
-      'O arquivo selecionado deve estar em PDF.',
-    );
-  }
+  validarPdf(arquivo);
 
   const publicacao = await prepararPublicacao({
     setor,
@@ -186,30 +220,14 @@ export async function publicarDocumento({
     descricao,
   });
 
-  const identificador =
-    globalThis.crypto?.randomUUID?.() ||
-    `${Date.now()}-${Math.random()
-      .toString(16)
-      .slice(2)}`;
+  const caminho = montarCaminho({
+    setor: publicacao.setor,
+    codigo: publicacao.codigo,
+    tipo: publicacao.tipoDocumento,
+    nomeArquivo: arquivo.name,
+  });
 
-  const caminho = [
-    'pdfs',
-    publicacao.setor,
-    publicacao.codigo,
-    publicacao.tipoDocumento,
-    `${identificador}-${sanitizarNomeArquivo(
-      arquivo.name,
-    )}`,
-  ].join('/');
-
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(caminho, arquivo, {
-      contentType: 'application/pdf',
-      upsert: false,
-    });
-
-  if (uploadError) throw uploadError;
+  await enviarArquivo(caminho, arquivo);
 
   try {
     const { error: insertError } = await supabase
@@ -236,6 +254,39 @@ export async function publicarDocumento({
   } catch (error) {
     await supabase.storage.from(BUCKET).remove([caminho]);
     throw error;
+  }
+}
+
+/*
+ * Troca o PDF de um documento já publicado: envia o novo arquivo,
+ * aponta o documento para ele (com nova data de publicação) e só então
+ * apaga o arquivo antigo.
+ */
+export async function substituirDocumento(documento, arquivo) {
+  validarPdf(arquivo);
+
+  const caminho = montarCaminho({
+    setor: documento.setor,
+    codigo: documento.codigo,
+    tipo: documento.tipo || documento.tipo_documento,
+    nomeArquivo: arquivo.name,
+  });
+
+  await enviarArquivo(caminho, arquivo);
+
+  const { error } = await supabase
+    .from('pops')
+    .update({ storage_path: caminho, criado_em: new Date().toISOString() })
+    .eq('id', documento.id);
+
+  if (error) {
+    await supabase.storage.from(BUCKET).remove([caminho]);
+    throw error;
+  }
+
+  if (documento.storage_path) {
+    const { error: erroRemocao } = await supabase.storage.from(BUCKET).remove([documento.storage_path]);
+    if (erroRemocao) console.warn('PDF novo publicado, mas o antigo não foi apagado:', erroRemocao);
   }
 }
 
