@@ -1015,3 +1015,33 @@
     align-items: flex-start;
   }
 }
+
+/* setor já definido (aberto a partir do setor) */
+.gd-novo__setor {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--marinho-claro);
+  border-radius: var(--raio);
+}
+
+.gd-novo__setor svg {
+  flex: 0 0 auto;
+  color: var(--verde);
+}
+
+.gd-novo__setor span {
+  display: grid;
+  line-height: 1.25;
+}
+
+.gd-novo__setor small {
+  color: var(--texto-2);
+  font-size: 0.75rem;
+}
+
+.gd-novo__setor strong {
+  color: var(--marinho);
+  font-size: 0.92rem;
+}
