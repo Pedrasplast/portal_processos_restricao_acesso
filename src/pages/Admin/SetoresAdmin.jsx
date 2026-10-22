@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FiCheck, FiEdit2, FiGrid, FiPlus, FiPower, FiRefreshCw, FiTrash2, FiX } from 'react-icons/fi';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FiCheck, FiEdit2, FiFolder, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
 
 import AppLayout from '../../components/layout/AppLayout';
 import { useFeedback } from '../../hooks/useFeedback';
@@ -12,14 +12,86 @@ import {
 } from '../../services/setoresService';
 import './Admin.css';
 
+const textoDocs = (n) => (n ? `${n} ${n === 1 ? 'documento' : 'documentos'}` : 'Nenhum documento');
+
+/* Cartão "Novo setor": vira um campo ao clicar. */
+function NovoSetor({ onCriado }) {
+  const { notificar } = useFeedback();
+  const [aberto, setAberto] = useState(false);
+  const [nome, setNome] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const botao = useRef(null);
+
+  function fechar() {
+    setAberto(false);
+    setNome('');
+    setTimeout(() => botao.current?.focus(), 0);
+  }
+
+  async function adicionar(event) {
+    event.preventDefault();
+    const limpo = nome.trim();
+    if (limpo.length < 2) {
+      notificar('aviso', 'Informe o nome do setor com pelo menos 2 caracteres.');
+      return;
+    }
+
+    setSalvando(true);
+    try {
+      await criarSetor(limpo);
+      notificar('sucesso', `Setor ${limpo.toLocaleUpperCase('pt-BR')} adicionado.`);
+      setNome('');
+      setAberto(false);
+      await onCriado();
+    } catch (error) {
+      notificar('erro', error.message || 'Não foi possível adicionar o setor.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  if (!aberto) {
+    return (
+      <button ref={botao} type="button" className="st-novo" onClick={() => setAberto(true)}>
+        <FiPlus aria-hidden="true" /> Novo setor
+      </button>
+    );
+  }
+
+  return (
+    <form className="st-novo-form" onSubmit={adicionar}>
+      <label htmlFor="st-novo-nome">Nome do novo setor</label>
+      <input
+        id="st-novo-nome"
+        className="form-control"
+        value={nome}
+        onChange={(e) => setNome(e.target.value.toLocaleUpperCase('pt-BR'))}
+        onKeyDown={(e) => e.key === 'Escape' && !salvando && fechar()}
+        placeholder="EX.: MANUTENÇÃO"
+        maxLength={60}
+        disabled={salvando}
+        autoFocus
+      />
+      <div className="st-novo-form__botoes">
+        <button type="submit" className="btn btn-primary btn-sm" disabled={salvando}>
+          <FiPlus /> {salvando ? 'Adicionando...' : 'Adicionar'}
+        </button>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={fechar} disabled={salvando}>
+          Cancelar
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function SetoresConteudo() {
   const { notificar, confirmar } = useFeedback();
   const [setores, setSetores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processandoId, setProcessandoId] = useState(null);
-  const [novoNome, setNovoNome] = useState('');
-  const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState({ id: null, nome: '' });
+  const [verAtivos, setVerAtivos] = useState(false);
+  const [verDesativados, setVerDesativados] = useState(false);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -36,31 +108,12 @@ function SetoresConteudo() {
     void carregar();
   }, [carregar]);
 
-  const resumo = useMemo(() => {
-    const ativos = setores.filter((s) => s.ativo).length;
-    return { ativos, desativados: setores.length - ativos };
-  }, [setores]);
+  const totalAtivos = useMemo(() => setores.filter((s) => s.ativo).length, [setores]);
+  const totalDesativados = setores.length - totalAtivos;
 
-  async function adicionar(event) {
-    event.preventDefault();
-    const nome = novoNome.trim();
-    if (nome.length < 2) {
-      notificar('aviso', 'Informe o nome do setor com pelo menos 2 caracteres.');
-      return;
-    }
-
-    setCriando(true);
-    try {
-      await criarSetor(nome);
-      notificar('sucesso', `Setor ${nome.toLocaleUpperCase('pt-BR')} adicionado.`);
-      setNovoNome('');
-      await carregar();
-    } catch (error) {
-      notificar('erro', error.message || 'Não foi possível adicionar o setor.');
-    } finally {
-      setCriando(false);
-    }
-  }
+  /* Nenhuma (ou as duas) caixas marcadas: mostra todos. */
+  const filtrando = verAtivos !== verDesativados;
+  const visiveis = filtrando ? setores.filter((s) => (verAtivos ? s.ativo : !s.ativo)) : setores;
 
   async function salvarNome(setor) {
     const nome = editando.nome.trim();
@@ -95,7 +148,7 @@ function SetoresConteudo() {
   async function alternarAtivo(setor) {
     const desativar = setor.ativo;
     const ok = await confirmar({
-      titulo: desativar ? 'Desativar setor' : 'Reativar setor',
+      titulo: desativar ? 'Desativar setor' : 'Ativar setor',
       mensagem: desativar
         ? setor.documentos > 0
           ? `Os ${setor.documentos} documento(s) de ${setor.nome} deixarão de aparecer no Início e no Repositório para todos os usuários.`
@@ -103,10 +156,10 @@ function SetoresConteudo() {
         : setor.documentos > 0
           ? `Os ${setor.documentos} documento(s) de ${setor.nome} voltarão a aparecer no Início e no Repositório.`
           : `${setor.nome} voltará a aparecer no cadastro de novos documentos.`,
-      detalhe: desativar
-        ? 'Nada é apagado: os documentos continuam salvos, visíveis só em Gerenciar documentos, e voltam ao reativar o setor.'
+      detalhe: desativar && setor.documentos > 0
+        ? 'Nada é apagado: os documentos continuam salvos, visíveis só em Gerenciar documentos, e voltam ao ativar o setor.'
         : undefined,
-      textoConfirmar: desativar ? 'Desativar' : 'Reativar',
+      textoConfirmar: desativar ? 'Desativar' : 'Ativar',
       perigo: desativar,
     });
     if (!ok) return;
@@ -114,7 +167,7 @@ function SetoresConteudo() {
     setProcessandoId(setor.id);
     try {
       await definirSetorAtivo(setor.id, !setor.ativo);
-      notificar('sucesso', desativar ? `${setor.nome} desativado.` : `${setor.nome} reativado.`);
+      notificar('sucesso', desativar ? `${setor.nome} desativado.` : `${setor.nome} ativado.`);
       await carregar();
     } catch (error) {
       notificar('erro', error.message || 'Não foi possível alterar o setor.');
@@ -127,7 +180,7 @@ function SetoresConteudo() {
     if (setor.documentos > 0) {
       notificar(
         'aviso',
-        `${setor.nome} tem ${setor.documentos} documento(s) e não pode ser excluído. Use "Desativar" para ocultá-lo sem apagar nada.`,
+        `${setor.nome} tem ${setor.documentos} documento(s) e não pode ser excluído. Desative o setor para ocultá-lo sem apagar nada.`,
         { titulo: 'Setor com documentos' },
       );
       return;
@@ -155,173 +208,121 @@ function SetoresConteudo() {
   }
 
   return (
-    <div className="setores-layout">
-      <section className="painel" aria-labelledby="setores-titulo">
-        <div className="painel__cabecalho">
-          <div>
-            <h2 id="setores-titulo">
-              <FiGrid aria-hidden="true" /> Setores
-            </h2>
-            <p>
-              {resumo.ativos} {resumo.ativos === 1 ? 'ativo' : 'ativos'}
-              {resumo.desativados > 0 && ` e ${resumo.desativados} ${resumo.desativados === 1 ? 'desativado' : 'desativados'}`}.
-              Setores desativados e seus documentos não aparecem para quem consulta o portal.
-            </p>
-          </div>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => carregar()} disabled={loading}>
-            <FiRefreshCw /> Atualizar
-          </button>
-        </div>
+    <>
+      <div className="st-filtros" role="group" aria-label="Filtrar setores">
+        <span className="st-filtros__rotulo">Mostrar:</span>
+        <label>
+          <input type="checkbox" checked={verAtivos} onChange={(e) => setVerAtivos(e.target.checked)} />
+          Ativos <b className="numero">{totalAtivos}</b>
+        </label>
+        <label>
+          <input type="checkbox" checked={verDesativados} onChange={(e) => setVerDesativados(e.target.checked)} />
+          Desativados <b className="numero">{totalDesativados}</b>
+        </label>
+        <span className="st-filtros__info" aria-live="polite">
+          {filtrando ? `Mostrando ${visiveis.length} de ${setores.length}` : `Mostrando todos (${setores.length})`}
+        </span>
+      </div>
 
-        <div className="table-wrapper">
-          <table className="data-table tabela-setores">
-            <thead>
-              <tr>
-                <th>Setor</th>
-                <th>Situação</th>
-                <th>Conteúdo</th>
-                <th><span className="sr-only">Ações</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && setores.length === 0 ? (
-                <tr><td colSpan="4" className="empty-state">Carregando setores...</td></tr>
-              ) : setores.length === 0 ? (
-                <tr><td colSpan="4" className="empty-state">Nenhum setor cadastrado. Adicione o primeiro ao lado.</td></tr>
-              ) : (
-                setores.map((setor) => {
-                  const processando = processandoId === setor.id;
-                  const emEdicao = editando.id === setor.id;
+      <div className="st-grade">
+        <NovoSetor onCriado={carregar} />
 
-                  return (
-                    <tr key={setor.id} className={setor.ativo ? undefined : 'linha-inativa'}>
-                      <td data-label="Setor">
-                        {emEdicao ? (
-                          <form
-                            className="setor-edicao"
-                            onSubmit={(event) => {
-                              event.preventDefault();
-                              void salvarNome(setor);
-                            }}
-                          >
-                            <input
-                              className="form-control"
-                              value={editando.nome}
-                              onChange={(event) => setEditando({ id: setor.id, nome: event.target.value })}
-                              onKeyDown={(event) => event.key === 'Escape' && setEditando({ id: null, nome: '' })}
-                              maxLength={60}
-                              autoFocus
-                              aria-label={`Novo nome para ${setor.nome}`}
-                            />
-                            <button type="submit" className="btn btn-primary btn-sm" disabled={processando} aria-label="Salvar nome">
-                              <FiCheck />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-sm"
-                              onClick={() => setEditando({ id: null, nome: '' })}
-                              aria-label="Cancelar"
-                            >
-                              <FiX />
-                            </button>
-                          </form>
-                        ) : (
-                          <strong className="setor-nome">{setor.nome}</strong>
-                        )}
-                      </td>
-                      <td data-label="Situação">
-                        <span className={`status-badge status-badge--${setor.ativo ? 'aprovado' : 'cancelado'}`}>
-                          {setor.ativo ? 'Ativo' : 'Desativado'}
-                        </span>
-                      </td>
-                      <td className="setor-conteudo numero">
-                        {setor.documentos === 0
-                          ? 'Sem documentos'
-                          : `${setor.processos} ${setor.processos === 1 ? 'processo' : 'processos'}, ${setor.documentos} ${setor.documentos === 1 ? 'documento' : 'documentos'}`}
-                      </td>
-                      <td className="celula-acoes">
-                        {!emEdicao && (
-                          <div className="request-actions">
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-sm btn-icone"
-                              onClick={() => setEditando({ id: setor.id, nome: setor.nome })}
-                              disabled={processando}
-                              aria-label={`Renomear ${setor.nome}`}
-                              title="Renomear"
-                            >
-                              <FiEdit2 />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => alternarAtivo(setor)}
-                              disabled={processando}
-                            >
-                              <FiPower /> {setor.ativo ? 'Desativar' : 'Reativar'}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-danger btn-sm btn-icone"
-                              onClick={() => excluir(setor)}
-                              disabled={processando}
-                              aria-label={`Excluir ${setor.nome}`}
-                              title={setor.documentos > 0 ? 'Setor com documentos: use Desativar' : 'Excluir setor'}
-                            >
-                              <FiTrash2 />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <aside className="setores-lateral">
-        <form className="painel" onSubmit={adicionar} aria-labelledby="novo-setor-titulo">
-          <div className="painel__cabecalho">
-            <div>
-              <h2 id="novo-setor-titulo">
-                <FiPlus aria-hidden="true" /> Adicionar setor
-              </h2>
-              <p>O novo setor aparece na hora no cadastro de documentos e no repositório.</p>
-            </div>
-          </div>
-          <div className="painel__corpo setores-form">
-            <div className="form-group">
-              <label htmlFor="novo-setor">Nome do setor</label>
-              <input
-                id="novo-setor"
-                className="form-control"
-                value={novoNome}
-                onChange={(event) => setNovoNome(event.target.value)}
-                placeholder="Ex.: MANUTENÇÃO"
-                maxLength={60}
-                disabled={criando}
-              />
-              <p className="form-ajuda">O nome é salvo em letras maiúsculas.</p>
-            </div>
-            <button type="submit" className="btn btn-primary" disabled={criando}>
-              <FiPlus /> {criando ? 'Adicionando...' : 'Adicionar setor'}
-            </button>
-          </div>
-        </form>
-
-        <div className="setores-dica">
-          <strong>Desativar ou excluir?</strong>
-          <p>
-            <b>Desativar</b> oculta o setor e os documentos dele do Início e do Repositório para todos,
-            sem apagar nada; ao reativar, tudo volta. <b>Excluir</b> só é possível quando o setor não
-            tem nenhum documento.
+        {loading && setores.length === 0 ? (
+          <p className="st-vazio">Carregando setores...</p>
+        ) : visiveis.length === 0 ? (
+          <p className="st-vazio">
+            {setores.length === 0 ? 'Nenhum setor cadastrado ainda.' : 'Nenhum setor neste filtro.'}
           </p>
-        </div>
-      </aside>
-    </div>
+        ) : (
+          visiveis.map((setor) => {
+            const processando = processandoId === setor.id;
+            const emEdicao = editando.id === setor.id;
+            const comDocumentos = setor.documentos > 0;
+
+            return (
+              <article key={setor.id} className={`st-card${setor.ativo ? '' : ' off'}`} aria-label={setor.nome}>
+                <div className="st-card__topo">
+                  {!emEdicao && <span className="st-card__icone" aria-hidden="true"><FiFolder /></span>}
+
+                  {emEdicao ? (
+                    <form
+                      className="st-card__nome st-card__edicao"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void salvarNome(setor);
+                      }}
+                    >
+                      <input
+                        className="form-control"
+                        value={editando.nome}
+                        onChange={(e) => setEditando({ id: setor.id, nome: e.target.value.toLocaleUpperCase('pt-BR') })}
+                        onKeyDown={(e) => e.key === 'Escape' && setEditando({ id: null, nome: '' })}
+                        maxLength={60}
+                        autoFocus
+                        aria-label={`Novo nome para ${setor.nome}`}
+                      />
+                      <button type="submit" className="st-acao" disabled={processando} aria-label="Salvar nome" title="Salvar">
+                        <FiCheck />
+                      </button>
+                      <button
+                        type="button"
+                        className="st-acao"
+                        onClick={() => setEditando({ id: null, nome: '' })}
+                        aria-label="Cancelar"
+                        title="Cancelar"
+                      >
+                        <FiX />
+                      </button>
+                    </form>
+                  ) : (
+                    <div className="st-card__nome">
+                      <strong title={setor.nome}>{setor.nome}</strong>
+                      <span className="st-card__situacao">{setor.ativo ? 'Ativo' : 'Desativado'}</span>
+                    </div>
+                  )}
+                </div>
+
+                <p className={`st-card__docs numero${comDocumentos ? '' : ' zero'}`}>{textoDocs(setor.documentos)}</p>
+
+                <div className="st-card__rodape">
+                  <button
+                    type="button"
+                    className="st-chave"
+                    role="switch"
+                    aria-checked={setor.ativo}
+                    onClick={() => alternarAtivo(setor)}
+                    disabled={processando}
+                  >
+                    <span className="st-chave__trilho" aria-hidden="true" />
+                    {setor.ativo ? 'Desativar' : 'Ativar'}
+                  </button>
+                  <button
+                    type="button"
+                    className="st-acao"
+                    onClick={() => setEditando({ id: setor.id, nome: setor.nome })}
+                    disabled={processando || emEdicao}
+                    aria-label={`Editar ${setor.nome}`}
+                    title="Editar nome"
+                  >
+                    <FiEdit2 />
+                  </button>
+                  <button
+                    type="button"
+                    className={`st-acao st-acao--excluir${comDocumentos ? ' travada' : ''}`}
+                    onClick={() => excluir(setor)}
+                    disabled={processando}
+                    aria-label={`Excluir ${setor.nome}`}
+                    title={comDocumentos ? 'Setor com documentos: só pode ser desativado' : 'Excluir setor'}
+                  >
+                    <FiTrash2 />
+                  </button>
+                </div>
+              </article>
+            );
+          })
+        )}
+      </div>
+    </>
   );
 }
 
@@ -331,7 +332,7 @@ function SetoresAdmin() {
       <header className="page-header">
         <div>
           <h1>Gerenciar setores</h1>
-          <p>Adicione, renomeie ou desative os setores usados para organizar os documentos.</p>
+          <p>Crie, edite, ative ou exclua os setores.</p>
         </div>
       </header>
 
