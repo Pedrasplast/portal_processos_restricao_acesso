@@ -696,38 +696,6 @@
   outline-offset: 2px;
 }
 
-.st-acao {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  color: var(--texto-2);
-  background: var(--superficie);
-  border: 1px solid var(--linha);
-  border-radius: 8px;
-}
-
-.st-acao:hover:not(:disabled) {
-  color: var(--marinho);
-  border-color: var(--linha-forte);
-}
-
-.st-acao--excluir {
-  color: var(--vermelho);
-  border-color: #f1d2cf;
-}
-
-.st-acao--excluir:hover:not(:disabled) {
-  color: var(--vermelho);
-  background: var(--vermelho-claro);
-  border-color: #efc4c0;
-}
-
-.st-acao.travada {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 /* desativado */
 .st-card.off {
   background: #fbfbfc;

@@ -6,7 +6,7 @@
   position: fixed;
   top: 72px;
   right: 18px;
-  z-index: 1100;
+  z-index: 1300;
 
   width: min(380px, calc(100vw - 32px));
 
