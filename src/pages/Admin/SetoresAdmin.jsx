@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FiCheck, FiEdit2, FiFolder, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
+import { FiFolder, FiPlus } from 'react-icons/fi';
 
 import AppLayout from '../../components/layout/AppLayout';
+import { BotaoCancelar, BotaoEditar, BotaoExcluir, BotaoSalvar } from '../../components/ui/BotaoAcao';
 import { useFeedback } from '../../hooks/useFeedback';
 import {
   criarSetor,
@@ -12,7 +13,27 @@ import {
 } from '../../services/setoresService';
 import './Admin.css';
 
-const textoDocs = (n) => (n ? `${n} ${n === 1 ? 'documento' : 'documentos'}` : 'Nenhum documento');
+/* ---------- vínculos do setor (documentos e registros) ---------- */
+
+const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+
+const temVinculo = (setor) => setor.documentos > 0 || setor.registros > 0;
+
+/* Texto do cartão: "4 documentos · 2 registros" */
+function textoVinculos(setor) {
+  const partes = [];
+  if (setor.documentos > 0) partes.push(plural(setor.documentos, 'documento', 'documentos'));
+  if (setor.registros > 0) partes.push(plural(setor.registros, 'registro', 'registros'));
+  return partes.length ? partes.join(' · ') : 'Sem documentos ou registros';
+}
+
+/* Aviso de exclusão: "4 documentos em Documentos e 2 registros em Registros" */
+function ondeEstaoVinculos(setor) {
+  const partes = [];
+  if (setor.documentos > 0) partes.push(`${plural(setor.documentos, 'documento', 'documentos')} em Documentos`);
+  if (setor.registros > 0) partes.push(`${plural(setor.registros, 'registro', 'registros')} em Registros`);
+  return partes.join(' e ');
+}
 
 /* Cartão "Novo setor": vira um campo ao clicar. */
 function NovoSetor({ onCriado }) {
@@ -177,11 +198,11 @@ function SetoresConteudo() {
   }
 
   async function excluir(setor) {
-    if (setor.documentos > 0) {
+    if (temVinculo(setor)) {
       notificar(
         'aviso',
-        `${setor.nome} tem ${setor.documentos} documento(s) e não pode ser excluído. Desative o setor para ocultá-lo sem apagar nada.`,
-        { titulo: 'Setor com documentos' },
+        `${setor.nome} não pode ser excluído porque tem ${ondeEstaoVinculos(setor)}. Desative o setor para ocultá-lo sem apagar nada.`,
+        { titulo: 'Setor em uso' },
       );
       return;
     }
@@ -189,7 +210,7 @@ function SetoresConteudo() {
     const ok = await confirmar({
       titulo: 'Excluir setor',
       mensagem: `O setor ${setor.nome} será excluído.`,
-      detalhe: 'Ele não tem documentos. Esta ação não pode ser desfeita.',
+      detalhe: 'Ele não tem documentos nem registros. Esta ação não pode ser desfeita.',
       textoConfirmar: 'Excluir setor',
       perigo: true,
     });
@@ -237,7 +258,7 @@ function SetoresConteudo() {
           visiveis.map((setor) => {
             const processando = processandoId === setor.id;
             const emEdicao = editando.id === setor.id;
-            const comDocumentos = setor.documentos > 0;
+            const emUso = temVinculo(setor);
 
             return (
               <article key={setor.id} className={`st-card${setor.ativo ? '' : ' off'}`} aria-label={setor.nome}>
@@ -261,18 +282,8 @@ function SetoresConteudo() {
                         autoFocus
                         aria-label={`Novo nome para ${setor.nome}`}
                       />
-                      <button type="submit" className="st-acao" disabled={processando} aria-label="Salvar nome" title="Salvar">
-                        <FiCheck />
-                      </button>
-                      <button
-                        type="button"
-                        className="st-acao"
-                        onClick={() => setEditando({ id: null, nome: '' })}
-                        aria-label="Cancelar"
-                        title="Cancelar"
-                      >
-                        <FiX />
-                      </button>
+                      <BotaoSalvar rotulo="Salvar nome" disabled={processando} />
+                      <BotaoCancelar onClick={() => setEditando({ id: null, nome: '' })} />
                     </form>
                   ) : (
                     <div className="st-card__nome">
@@ -282,7 +293,7 @@ function SetoresConteudo() {
                   )}
                 </div>
 
-                <p className={`st-card__docs numero${comDocumentos ? '' : ' zero'}`}>{textoDocs(setor.documentos)}</p>
+                <p className={`st-card__docs numero${emUso ? '' : ' zero'}`}>{textoVinculos(setor)}</p>
 
                 <div className="st-card__rodape">
                   <button
@@ -296,26 +307,19 @@ function SetoresConteudo() {
                     <span className="st-chave__trilho" aria-hidden="true" />
                     {setor.ativo ? 'Desativar' : 'Ativar'}
                   </button>
-                  <button
-                    type="button"
-                    className="st-acao"
+                  <BotaoEditar
+                    rotulo={`Editar ${setor.nome}`}
+                    dica="Editar nome"
                     onClick={() => setEditando({ id: setor.id, nome: setor.nome })}
                     disabled={processando || emEdicao}
-                    aria-label={`Editar ${setor.nome}`}
-                    title="Editar nome"
-                  >
-                    <FiEdit2 />
-                  </button>
-                  <button
-                    type="button"
-                    className={`st-acao st-acao--excluir${comDocumentos ? ' travada' : ''}`}
+                  />
+                  <BotaoExcluir
+                    rotulo={`Excluir ${setor.nome}`}
+                    dica={emUso ? `Em uso (${textoVinculos(setor)}): só pode ser desativado` : 'Excluir setor'}
+                    travado={emUso}
                     onClick={() => excluir(setor)}
                     disabled={processando}
-                    aria-label={`Excluir ${setor.nome}`}
-                    title={comDocumentos ? 'Setor com documentos: só pode ser desativado' : 'Excluir setor'}
-                  >
-                    <FiTrash2 />
-                  </button>
+                  />
                 </div>
               </article>
             );

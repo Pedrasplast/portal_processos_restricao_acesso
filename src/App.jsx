@@ -10,6 +10,7 @@ import Repository from './pages/Repository/Repository';
 import DocumentosAdmin from './pages/Admin/DocumentosAdmin';
 import UsuariosAdmin from './pages/Admin/UsuariosAdmin';
 import SetoresAdmin from './pages/Admin/SetoresAdmin';
+import RegistrosAdmin from './pages/Admin/RegistrosAdmin';
 import Register from './pages/Register/Register';
 
 function App() {
@@ -66,6 +67,15 @@ function App() {
               element={
                 <AdminRoute>
                   <SetoresAdmin />
+                </AdminRoute>
+              }
+            />
+
+            <Route
+              path="/admin/registros"
+              element={
+                <AdminRoute>
+                  <RegistrosAdmin />
                 </AdminRoute>
               }
             />

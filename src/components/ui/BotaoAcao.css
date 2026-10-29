@@ -1,0 +1,51 @@
+/* =====================================================
+   Botão de ação (ícone) — componente global BotaoAcao
+===================================================== */
+
+.botao-acao {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: var(--texto-2);
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.botao-acao:hover:not(:disabled) {
+  color: var(--marinho);
+  border-color: var(--linha-forte);
+}
+
+.botao-acao:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+
+.botao-acao:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ações que apagam */
+.botao-acao--perigo {
+  color: var(--vermelho);
+  border-color: #f1d2cf;
+}
+
+.botao-acao--perigo:hover:not(:disabled) {
+  color: var(--vermelho);
+  background: var(--vermelho-claro);
+  border-color: #efc4c0;
+}
+
+/* bloqueado, mas clicável (mostra o motivo ao clicar) */
+.botao-acao--travado {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

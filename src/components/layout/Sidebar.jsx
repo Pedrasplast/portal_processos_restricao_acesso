@@ -1,4 +1,4 @@
-import { FiFileText, FiFolder, FiGrid, FiHome, FiUsers, FiX } from 'react-icons/fi';
+import { FiClipboard, FiFileText, FiFolder, FiGrid, FiHome, FiUsers, FiX } from 'react-icons/fi';
 import { NavLink } from 'react-router-dom';
 
 import { useAuth } from '../../hooks/useAuth';
@@ -49,6 +49,11 @@ function Sidebar({ open, onClose, pendentes = 0 }) {
               <NavLink to="/admin/setores" className={linkClass} onClick={onClose}>
                 <FiGrid />
                 <span>Setores</span>
+              </NavLink>
+
+              <NavLink to="/admin/registros" className={linkClass} onClick={onClose}>
+                <FiClipboard />
+                <span>Registros</span>
               </NavLink>
 
               <NavLink to="/admin/usuarios" className={linkClass} onClick={onClose}>
