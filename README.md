@@ -25,6 +25,8 @@ A configuração está em `supabase/migrations/`, para rodar no SQL Editor nesta
 7. `20261021g_setor_desativado_oculta.sql` — setor desativado oculta seus documentos
 8. `20261022_substituir_pdf.sql` — admin pode substituir o PDF de um documento
 9. `20261029_renomear_processo.sql` — admin pode editar o nome (descrição) de um processo
+10. `20261029b_registros.sql` — aba Registros (temas, registros, setores, arquivos e bucket `registros`)
+11. `20261029c_setores_vinculos.sql` — setores mostram e bloqueiam exclusão por documentos e registros
 
 Tabelas:
 
@@ -34,6 +36,10 @@ Tabelas:
 | `solicitacoes_acesso` | Pedidos de acesso (histórico). No máximo um pendente por usuário. |
 | `pops` | Documentos: `titulo` (`01 - DESCRIÇÃO`), `setor`, `tipo_documento` (`POP`, `FLUXOGRAMA`, `MANUAL`), `storage_path`. |
 | `setores` | Setores (nome único, ativo). Gerenciados em Administração > Setores. Setor desativado: documentos ocultos no Início/Repositório (só admin vê, em Gerenciar documentos). |
+| `temas_registro` | Temas dos registros (Reunião, Treinamento, Diagnóstico...). Cadastráveis em Administração > Registros > Temas. |
+| `registros` | Registros de reuniões: tema, data, pauta e participantes (opcionais). Só admin. |
+| `registros_setores` | Setores de cada registro (um ou mais). |
+| `registros_arquivos` | Arquivos de cada registro (bucket privado `registros`, até 50 MB, PDF/Office/TXT/fotos). |
 | `convites` | Links de convite (uso único, com validade). Sem acesso direto: só via funções. |
 | `usuarios_pops` | Legado, não usado pelo front (só admin acessa). |
 
@@ -74,8 +80,9 @@ A regra fica no banco (RLS), não só na tela:
 | `definir_acesso_usuario(user_id, acao)` | admin | `LIBERAR`, `NEGAR`, `REVOGAR`, `BLOQUEAR`, `DESBLOQUEAR` |
 | `criar_setor(nome)` / `renomear_setor(id, nome)` | admin | Adiciona / renomeia (renomear atualiza os documentos) |
 | `definir_setor_ativo(id, ativo)` / `excluir_setor(id)` | admin | Desativa/reativa; exclui só setor sem documentos |
-| `listar_setores_admin()` | admin | Setores com contagem de processos e documentos |
+| `listar_setores_admin()` | admin | Setores com contagem de processos, documentos e registros |
 | `renomear_processo(ids, numero, descricao)` | admin | Troca a descrição do processo em todos os documentos da linha |
+| `salvar_registro(id, tema_id, data, pauta, participantes, setor_ids)` | admin | Cria/edita um registro e seus setores de uma vez |
 | `excluir_usuario(user_id)` | admin | Apaga a conta (não vale para admin nem para si mesmo) |
 | `criar_convite(email, dias)` | admin | Gera um link de convite |
 | `listar_convites()` / `cancelar_convite(id)` | admin | Lista / cancela convites |
@@ -106,7 +113,7 @@ if (await confirmar({ titulo, mensagem, detalhe, textoConfirmar, perigo: true })
 
 - `/login`, `/cadastro` — públicas
 - `/` (Início: panorama e documentos recentes por tipo, só visual) e `/pops` (Repositório em formato explorador por setor; aceita `?setor=`, `?busca=` e `?tipo=`) — exigem acesso liberado
-- `/admin/documentos`, `/admin/setores` e `/admin/usuarios` — exigem `profiles.regra = 'admin'` (`/admin` redireciona)
+- `/admin/documentos`, `/admin/setores`, `/admin/registros` e `/admin/usuarios` — exigem `profiles.regra = 'admin'` (`/admin` redireciona)
 
 ## Visual
 

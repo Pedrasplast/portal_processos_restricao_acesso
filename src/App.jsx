@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { FeedbackProvider } from './context/FeedbackContext';
 import AccessRoute from './components/routes/AccessRoute';
 import AdminRoute from './components/routes/AdminRoute';
+import AvisoNovaVersao from './components/feedback/AvisoNovaVersao';
 import Home from './pages/Home/Home';
 import Login from './pages/Login/Login';
 import Repository from './pages/Repository/Repository';
@@ -18,6 +19,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <FeedbackProvider>
+          <AvisoNovaVersao />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Register />} />

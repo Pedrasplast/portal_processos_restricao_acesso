@@ -1,0 +1,96 @@
+/* =====================================================
+   Faixa "Nova versão disponível" (AvisoNovaVersao)
+   Acima das janelas (1200) e abaixo dos avisos (1300).
+===================================================== */
+
+.aviso-versao {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  z-index: 1250;
+
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 8px 8px 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  color: #fff;
+  background: var(--marinho);
+  border-radius: 999px;
+  box-shadow: var(--sombra-flutuante);
+  transform: translateX(-50%);
+  animation: aviso-versao-entrar 220ms ease-out;
+}
+
+.aviso-versao__icone {
+  flex: 0 0 auto;
+  color: #7fd6a3;
+}
+
+.aviso-versao__texto {
+  font-size: 0.86rem;
+}
+
+.aviso-versao__texto strong {
+  font-weight: 700;
+}
+
+.aviso-versao .btn-primary {
+  flex: 0 0 auto;
+  color: var(--marinho);
+  background: #fff;
+  border-color: #fff;
+}
+
+.aviso-versao .btn-primary:hover {
+  background: var(--verde-claro);
+}
+
+.aviso-versao__fechar {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.8);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.aviso-versao__fechar:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.aviso-versao__fechar:focus-visible,
+.aviso-versao .btn:focus-visible {
+  outline: 2px solid #7fd6a3;
+  outline-offset: 2px;
+}
+
+@keyframes aviso-versao-entrar {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 560px) {
+  .aviso-versao {
+    border-radius: var(--raio-lg);
+    flex-wrap: wrap;
+  }
+
+  .aviso-versao__texto {
+    flex: 1 1 calc(100% - 60px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aviso-versao {
+    animation: none;
+  }
+}
