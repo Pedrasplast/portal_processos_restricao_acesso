@@ -1006,6 +1006,19 @@
   font-size: 0.76rem;
 }
 
+.gd-processo__editar.btn-icone {
+  flex: 0 0 auto;
+  width: 27px;
+  height: 28px;
+  min-height: 28px;
+  margin-left: auto;
+  color: var(--texto-2);
+}
+
+.gd-processo__editar.btn-icone:hover:not(:disabled) {
+  color: var(--marinho);
+}
+
 .gd-cod {
   flex: 0 0 auto;
   min-width: 38px;

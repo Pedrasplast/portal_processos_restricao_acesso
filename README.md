@@ -24,6 +24,7 @@ A configuração está em `supabase/migrations/`, para rodar no SQL Editor nesta
 6. `20261021f_setores.sql` — cadastro de setores
 7. `20261021g_setor_desativado_oculta.sql` — setor desativado oculta seus documentos
 8. `20261022_substituir_pdf.sql` — admin pode substituir o PDF de um documento
+9. `20261029_renomear_processo.sql` — admin pode editar o nome (descrição) de um processo
 
 Tabelas:
 
@@ -74,6 +75,7 @@ A regra fica no banco (RLS), não só na tela:
 | `criar_setor(nome)` / `renomear_setor(id, nome)` | admin | Adiciona / renomeia (renomear atualiza os documentos) |
 | `definir_setor_ativo(id, ativo)` / `excluir_setor(id)` | admin | Desativa/reativa; exclui só setor sem documentos |
 | `listar_setores_admin()` | admin | Setores com contagem de processos e documentos |
+| `renomear_processo(ids, numero, descricao)` | admin | Troca a descrição do processo em todos os documentos da linha |
 | `excluir_usuario(user_id)` | admin | Apaga a conta (não vale para admin nem para si mesmo) |
 | `criar_convite(email, dias)` | admin | Gera um link de convite |
 | `listar_convites()` / `cancelar_convite(id)` | admin | Lista / cancela convites |
