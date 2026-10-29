@@ -291,6 +291,33 @@ export async function substituirDocumento(documento, arquivo) {
 }
 
 /*
+ * Troca a descrição de um processo (todos os documentos da linha).
+ * O número e o setor continuam os mesmos.
+ */
+export async function renomearProcesso(grupo, descricao) {
+  const descricaoNormalizada = normalizarDescricaoDocumento(descricao);
+
+  if (descricaoNormalizada.length < 3) {
+    throw new Error('Informe uma descrição com pelo menos 3 caracteres.');
+  }
+
+  const ids = Object.values(grupo?.arquivos || {})
+    .map((documento) => documento?.id)
+    .filter(Boolean);
+
+  if (!ids.length) throw new Error('Processo sem documentos.');
+
+  const { data, error } = await supabase.rpc('renomear_processo', {
+    p_ids: ids,
+    p_numero: grupo.numero,
+    p_descricao: descricaoNormalizada,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/*
  * Remove primeiro a linha do banco (o que o usuário vê) e depois o PDF.
  * Se a remoção do arquivo falhar, sobra só um arquivo órfão, nunca uma
  * linha apontando para um PDF inexistente.

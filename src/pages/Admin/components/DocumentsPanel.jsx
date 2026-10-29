@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FiDownload,
-  FiEye,
+  FiEdit2,
   FiFolder,
   FiPlus,
   FiRefreshCw,
@@ -18,9 +17,9 @@ import { useSetores } from '../../../hooks/useSetores';
 import {
   excluirDocumento,
   publicarDocumento,
+  renomearProcesso,
   substituirDocumento,
 } from '../../../services/documentosService';
-import { baixarDocumento, visualizarDocumento } from '../../../utils/arquivos';
 import { agruparDocumentos, obterNumeracaoDocumento } from '../../../utils/documentos';
 import { normalizarChave } from '../../../utils/texto';
 
@@ -192,6 +191,91 @@ function NovoProcesso({ documentos, setoresAtivos, setorInicial, onFechar, onPub
 }
 
 /* ------------------------------------------------------------------
+   Janela "Editar processo": troca a descrição (o número não muda).
+------------------------------------------------------------------- */
+function EditarProcesso({ grupo, onFechar, onSalvo }) {
+  const { notificar } = useFeedback();
+  const [descricao, setDescricao] = useState(grupo.descricao || '');
+  const [salvando, setSalvando] = useState(false);
+  const campo = useRef(null);
+  const qtdDocs = Object.keys(grupo.arquivos).length;
+
+  useEffect(() => {
+    campo.current?.focus();
+    campo.current?.select();
+    const aoTeclar = (event) => event.key === 'Escape' && !salvando && onFechar();
+    document.addEventListener('keydown', aoTeclar);
+    return () => document.removeEventListener('keydown', aoTeclar);
+  }, [onFechar, salvando]);
+
+  async function salvar(event) {
+    event.preventDefault();
+    const nova = descricao.trim().replace(/\s+/g, ' ');
+    if (nova.length < 3) return notificar('aviso', 'Informe a descrição do processo (mínimo de 3 letras).');
+    if (nova === grupo.descricao) return onFechar();
+
+    setSalvando(true);
+    try {
+      const titulo = await renomearProcesso(grupo, nova);
+      notificar('sucesso', `Processo renomeado para ${titulo || nova}.`);
+      await onSalvo();
+    } catch (error) {
+      notificar('erro', error.message || 'Não foi possível editar o processo.');
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div className="dialogo-fundo" onMouseDown={(e) => e.target === e.currentTarget && !salvando && onFechar()}>
+      <form className="dialogo gd-novo" role="dialog" aria-modal="true" aria-labelledby="gd-editar-titulo" onSubmit={salvar}>
+        <div className="gd-novo__cab">
+          <h2 id="gd-editar-titulo">Editar processo</h2>
+          <button type="button" className="btn btn-ghost btn-sm btn-icone" onClick={onFechar} aria-label="Fechar" disabled={salvando}>
+            <FiX />
+          </button>
+        </div>
+
+        <div className="gd-novo__corpo">
+          <div className="gd-novo__setor">
+            <FiFolder aria-hidden="true" />
+            <span>
+              <small>Setor</small>
+              <strong>{grupo.setor}</strong>
+            </span>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="gd-editar-descricao">Descrição do processo</label>
+            <div className="campo-descricao">
+              <span className="campo-descricao__codigo numero" aria-label="Número do processo">{grupo.codigo}</span>
+              <input
+                id="gd-editar-descricao"
+                ref={campo}
+                className="form-control"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value.toLocaleUpperCase('pt-BR'))}
+                maxLength={140}
+                disabled={salvando}
+              />
+            </div>
+            <p className="form-ajuda">
+              O número continua o mesmo. O novo nome vale para {qtdDocs === 1 ? 'o documento' : `os ${qtdDocs} documentos`} deste processo.
+            </p>
+          </div>
+        </div>
+
+        <div className="dialogo__acoes gd-novo__rodape">
+          <button type="button" className="btn btn-secondary" onClick={onFechar} disabled={salvando}>Cancelar</button>
+          <button type="submit" className="btn btn-primary" disabled={salvando}>
+            <FiEdit2 /> {salvando ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------
    Gerenciar documentos: setores à esquerda, processos à direita.
 ------------------------------------------------------------------- */
 function DocumentsPanel({ documentos, loading, erro, onReload }) {
@@ -201,8 +285,8 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
   const [busca, setBusca] = useState('');
   const [mostrarVazios, setMostrarVazios] = useState(false);
   const [ocupado, setOcupado] = useState(null);
-  const [baixandoId, setBaixandoId] = useState(null);
   const [novo, setNovo] = useState(null);
+  const [editando, setEditando] = useState(null);
   const inputArquivo = useRef(null);
   const acaoArquivo = useRef(null);
 
@@ -349,24 +433,9 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
     }
   }
 
-  async function abrir(documento) {
-    try {
-      await visualizarDocumento(documento);
-    } catch (error) {
-      notificar('erro', error.message);
-    }
-  }
-
-  async function baixar(documento) {
-    if (baixandoId) return;
-    setBaixandoId(documento.id);
-    try {
-      await baixarDocumento(documento);
-    } catch (error) {
-      notificar('erro', error.message);
-    } finally {
-      setBaixandoId(null);
-    }
+  async function aoSalvarEdicao() {
+    setEditando(null);
+    await onReload();
   }
 
   function abrirNovo(setor) {
@@ -390,7 +459,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
       <header className="page-header">
         <div>
           <h1>Gerenciar documentos</h1>
-          <p>Escolha o setor e publique, substitua ou exclua os PDFs de cada processo.</p>
+          <p>Escolha o setor e publique, substitua ou exclua os PDFs de cada processo, ou edite o nome do processo.</p>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => abrirNovo('')}>
           <FiPlus /> Novo processo
@@ -505,6 +574,16 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
                         <strong>{grupo.descricao}</strong>
                         {termo && <small>{grupo.setor}</small>}
                       </span>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm btn-icone gd-processo__editar"
+                        onClick={() => setEditando(grupo)}
+                        disabled={Boolean(ocupado)}
+                        aria-label={`Editar nome do processo ${grupo.titulo}`}
+                        title="Editar nome do processo"
+                      >
+                        <FiEdit2 />
+                      </button>
                     </div>
 
                     {TIPOS_DOCUMENTO.map((t) => {
@@ -537,25 +616,6 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
                             <small>{emAndamento ? 'Processando...' : formatarData(documento.criado_em)}</small>
                           </span>
                           <span className="gd-doc__acoes">
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-sm btn-icone"
-                              onClick={() => abrir(documento)}
-                              aria-label={`Visualizar ${t.nome} de ${grupo.titulo}`}
-                              title="Visualizar"
-                            >
-                              <FiEye />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-sm btn-icone"
-                              onClick={() => baixar(documento)}
-                              disabled={baixandoId === documento.id}
-                              aria-label={`Baixar ${t.nome} de ${grupo.titulo}`}
-                              title="Baixar PDF"
-                            >
-                              <FiDownload />
-                            </button>
                             <button
                               type="button"
                               className="btn btn-ghost btn-sm btn-icone"
@@ -606,6 +666,14 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
           setorInicial={novo.setor}
           onFechar={() => setNovo(null)}
           onPublicado={aoPublicarNovo}
+        />
+      )}
+
+      {editando && (
+        <EditarProcesso
+          grupo={editando}
+          onFechar={() => setEditando(null)}
+          onSalvo={aoSalvarEdicao}
         />
       )}
     </>
