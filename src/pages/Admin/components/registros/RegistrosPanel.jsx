@@ -98,7 +98,7 @@ function RegistrosPanel() {
         </div>
       </header>
 
-      {!carregando && registros.length > 0 && (
+      {!carregando && (
         <div className="rg-indicadores">
           <CardIndicador
             titulo="Registros"

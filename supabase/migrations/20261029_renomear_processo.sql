@@ -10,8 +10,10 @@
 -- Idempotente. Compatível com o site já publicado.
 -- =====================================================================
 
+drop function if exists public.renomear_processo(uuid[], integer, text);
+
 create or replace function public.renomear_processo(
-  p_ids       uuid[],
+  p_ids       bigint[],
   p_numero    integer,
   p_descricao text
 )
@@ -69,5 +71,5 @@ begin
 end;
 $$;
 
-revoke all on function public.renomear_processo(uuid[], integer, text) from public, anon, authenticated;
-grant execute on function public.renomear_processo(uuid[], integer, text) to authenticated;
+revoke all on function public.renomear_processo(bigint[], integer, text) from public, anon, authenticated;
+grant execute on function public.renomear_processo(bigint[], integer, text) to authenticated;
