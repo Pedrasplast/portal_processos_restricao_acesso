@@ -75,6 +75,7 @@
 
 .rg-painel {
   overflow: hidden;
+  container: rg / inline-size;
 }
 
 /* Uma linha: busca (ocupa o espaço livre) | setor | tema | limpar */
@@ -147,8 +148,13 @@
 }
 
 .rg-texto {
-  min-width: 180px;
+  min-width: 140px;
   max-width: 320px;
+}
+
+/* coluna Registro com largura fixa: nomes longos terminam em "…" */
+.rg-tabela .rg-arquivos {
+  width: 180px;
 }
 
 /* texto longo: mostra N linhas + "Ver mais" (componente TextoRecolhivel) */
@@ -456,6 +462,7 @@ button.rg-arquivo:hover:not(:disabled) {
 }
 
 .rg-tema-novo .form-control {
+  min-width: 0;
   flex: 1 1 auto;
 }
 
@@ -482,7 +489,10 @@ button.rg-arquivo:hover:not(:disabled) {
 }
 
 .rg-tema__nome {
+  min-width: 0;
+  overflow-wrap: break-word;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   font-size: 0.86rem;
@@ -490,6 +500,7 @@ button.rg-arquivo:hover:not(:disabled) {
 }
 
 .rg-tema__nome small {
+  white-space: nowrap;
   color: var(--ambar);
   font-size: 0.72rem;
   font-weight: 600;
@@ -546,7 +557,13 @@ button.rg-arquivo:hover:not(:disabled) {
   .rg-linha {
     grid-template-columns: 1fr;
   }
+}
 
+/* ---------- tabela em cartões ----------
+   Depende da largura do PAINEL (não da tela): sem espaço para as
+   7 colunas, cada registro vira um cartão (2 colunas no tablet, 1 no celular). */
+
+@container rg (max-width: 939px) {
   .rg-tabela thead {
     display: none;
   }
@@ -561,21 +578,38 @@ button.rg-arquivo:hover:not(:disabled) {
   }
 
   .rg-tabela tr {
-    padding: 10px 16px;
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 24px;
     border-bottom: 1px solid var(--linha);
   }
 
+  .rg-tabela tr:last-child {
+    border-bottom: 0;
+  }
+
   .rg-tabela td {
-    padding: 4px 0;
+    min-width: 0;
+    padding: 0;
     border: 0;
+  }
+
+  .rg-tabela tbody tr:hover td {
+    background: transparent;
   }
 
   .rg-tabela td[data-rotulo]::before {
     content: attr(data-rotulo);
+    margin-bottom: 2px;
     display: block;
     color: var(--texto-3);
     font-size: 0.7rem;
     font-weight: 650;
+  }
+
+  .rg-acoes {
+    text-align: left;
   }
 
   .rg-acoes__botoes {
@@ -584,5 +618,17 @@ button.rg-arquivo:hover:not(:disabled) {
 
   .rg-arquivo {
     max-width: none;
+  }
+
+  .rg-tabela .rg-arquivos {
+    width: auto;
+  }
+}
+
+@container rg (max-width: 559px) {
+  .rg-tabela tr {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 12px 16px;
   }
 }

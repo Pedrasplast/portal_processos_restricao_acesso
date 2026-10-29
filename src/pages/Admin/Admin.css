@@ -375,7 +375,7 @@
   padding: 14px 22px 18px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .us-tabela thead {
     display: none;
   }
@@ -1221,17 +1221,38 @@
   }
 }
 
-@media (max-width: 760px) {
+/* A linha do processo depende da largura do PAINEL, e não da tela:
+   o espaço muda com o menu lateral e a lista de setores. */
+.gd-conteudo {
+  container: gd / inline-size;
+}
+
+/* médio: nome em cima, POP / Fluxograma / Manual lado a lado embaixo */
+@container gd (max-width: 899px) {
   .gd-colunas {
     display: none;
   }
 
   .gd-processo {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .gd-processo__titulo {
+    grid-column: 1 / -1;
+  }
+}
+
+/* estreito: um embaixo do outro */
+@container gd (max-width: 559px) {
+  .gd-processo {
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     padding: 14px 16px;
   }
+}
 
+@media (max-width: 760px) {
   .gd-conteudo__cab {
     flex-direction: column;
     align-items: flex-start;

@@ -309,16 +309,35 @@
   }
 }
 
-@media (max-width: 760px) {
+/* A linha do processo depende da largura do PAINEL, e não da tela. */
+.explorador__conteudo {
+  container: explorador / inline-size;
+}
+
+@container explorador (max-width: 819px) {
   .explorador__colunas {
     display: none;
   }
 
   .explorador__processo {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .explorador__titulo {
+    grid-column: 1 / -1;
+  }
+}
+
+@container explorador (max-width: 519px) {
+  .explorador__processo {
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     padding: 14px 16px;
   }
+}
+
+@media (max-width: 760px) {
 
   .explorador__titulo {
     margin-bottom: 2px;
