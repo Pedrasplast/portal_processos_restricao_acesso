@@ -10,6 +10,8 @@
 .app-shell__main {
   min-height: 100vh;
   margin-left: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
 }
 
 .app-content {
@@ -18,6 +20,7 @@
   min-width: 0;
   margin: 0 auto;
   padding: 28px 32px 48px;
+  flex: 1 0 auto; /* empurra o rodapé para o fim, mesmo em página curta */
 }
 
 .pular-conteudo {

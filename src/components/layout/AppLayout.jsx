@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePolling } from '../../hooks/usePolling';
 import { contarPendentes } from '../../services/solicitacoesService';
 import Navbar from './Navbar';
+import Rodape from './Rodape';
 import Sidebar from './Sidebar';
 import './Layout.css';
 
@@ -49,6 +50,7 @@ function AppLayout({ children, titulo }) {
           <main id="conteudo" className="app-content">
             {children}
           </main>
+          <Rodape />
         </div>
       </div>
     </LayoutContext.Provider>

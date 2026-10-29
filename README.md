@@ -99,6 +99,22 @@ A regra fica no banco (RLS), não só na tela:
 - Download vai direto do Storage, sem passar pela memória do navegador.
 - Limpeza diária (`pg_cron`, 03:00): apaga pedidos finalizados com mais de 90 dias.
 
+## Versão do portal
+
+A versão aparece no rodapé de todas as páginas (ex.: **Versão 1.0.00**) e vem
+do campo `version` do `package.json` (`1.0.0` é exibido como `1.0.00`).
+
+Antes de publicar uma atualização, suba a versão:
+
+```bash
+npm run versao   # 1.0.00 -> 1.0.01 -> 1.0.02 ...
+```
+
+Para uma mudança grande, edite o `package.json` à mão (ex.: `1.1.0` → `1.1.00`).
+
+O aviso "Nova versão disponível" não depende desse número: ele compara o
+commit publicado (`version.json`), então avisa mesmo se a versão não for subida.
+
 ## Mensagens e confirmações
 
 O site não usa `alert`/`confirm` do navegador. Use o hook `useFeedback()`:
