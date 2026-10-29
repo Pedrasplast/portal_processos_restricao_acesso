@@ -478,14 +478,15 @@ h3 {
 }
 
 /* iPhone/iPad dão zoom automático ao tocar em campo com fonte < 16px
-   (a tela "aumenta" e o conteúdo some de vista). */
+   (a tela "aumenta" e o conteúdo some de vista). O !important garante que
+   nenhuma regra mais específica de tela (ex.: editar setor) baixe de 16px. */
 @media (max-width: 760px), (pointer: coarse) {
   .form-control,
   .campo-busca input,
   input,
   select,
   textarea {
-    font-size: 16px;
+    font-size: 16px !important;
   }
 }
 
