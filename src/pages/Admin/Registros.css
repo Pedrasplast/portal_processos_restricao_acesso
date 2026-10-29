@@ -246,6 +246,7 @@
   margin: 0;
   padding: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* nome longo corta com "…" em vez de alargar */
   gap: 4px;
   list-style: none;
 }
