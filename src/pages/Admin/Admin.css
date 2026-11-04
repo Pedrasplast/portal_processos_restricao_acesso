@@ -1078,6 +1078,41 @@
   border-color: var(--verde);
 }
 
+.gd-adicionar__texto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  line-height: 1.2;
+}
+
+.gd-adicionar__texto > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gd-adicionar__texto small {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--texto-3, var(--texto-2));
+  opacity: 0.85;
+}
+
+/* PDF sendo arrastado sobre a área */
+.gd-adicionar.arrastando,
+.gd-doc.arrastando {
+  color: var(--verde-escuro);
+  background: #eef8f2;
+  border-color: var(--verde);
+  border-style: solid;
+  box-shadow: 0 0 0 1px var(--verde);
+}
+
+.gd-doc.arrastando {
+  border-left-color: var(--verde);
+}
+
 .gd-adicionar:disabled {
   opacity: 0.55;
   cursor: not-allowed;

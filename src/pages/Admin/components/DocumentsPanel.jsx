@@ -37,6 +37,11 @@ function formatarData(valor) {
   return Number.isNaN(data.getTime()) ? '' : data.toLocaleDateString('pt-BR');
 }
 
+const ehPdf = (arquivo) => arquivo?.type === 'application/pdf' || arquivo?.name?.toLowerCase().endsWith('.pdf');
+
+/* O arraste traz arquivos do computador (e não texto ou link)? */
+const arrastaArquivo = (event) => Array.from(event.dataTransfer?.types || []).includes('Files');
+
 const tamanho = (bytes) =>
   bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
@@ -287,10 +292,24 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
   const [ocupado, setOcupado] = useState(null);
   const [novo, setNovo] = useState(null);
   const [editando, setEditando] = useState(null);
+  const [alvoArraste, setAlvoArraste] = useState(null);
   const inputArquivo = useRef(null);
   const acaoArquivo = useRef(null);
 
   const grupos = useMemo(() => agruparDocumentos(documentos), [documentos]);
+
+  /* Um PDF solto fora das áreas de soltar não deve abrir no lugar do portal. */
+  useEffect(() => {
+    const bloquear = (event) => {
+      if (arrastaArquivo(event)) event.preventDefault();
+    };
+    window.addEventListener('dragover', bloquear);
+    window.addEventListener('drop', bloquear);
+    return () => {
+      window.removeEventListener('dragover', bloquear);
+      window.removeEventListener('drop', bloquear);
+    };
+  }, []);
 
   /* Situação de cada setor (todos os cadastrados + algum órfão). */
   const listaSetores = useMemo(() => {
@@ -359,8 +378,44 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
     acaoArquivo.current = null;
     if (!arquivo || !acao) return;
 
+    await executarAcao(acao, arquivo);
+  }
+
+  async function executarAcao(acao, arquivo) {
     if (acao.tipo === 'adicionar') await adicionar(acao.grupo, acao.tipoDoc, arquivo);
     if (acao.tipo === 'substituir') await substituir(acao.documento, acao.grupo, arquivo);
+  }
+
+  /* --- arrastar e soltar um PDF direto no "Adicionar" ou no card do documento --- */
+
+  function propsSoltar(chave, acao, habilitado) {
+    if (!habilitado) return {};
+    return {
+      onDragOver: (event) => {
+        if (!arrastaArquivo(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        if (alvoArraste !== chave) setAlvoArraste(chave);
+      },
+      onDragLeave: (event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setAlvoArraste(null);
+      },
+      onDrop: (event) => {
+        if (!arrastaArquivo(event)) return;
+        event.preventDefault();
+        setAlvoArraste(null);
+        const arquivos = Array.from(event.dataTransfer.files || []);
+        if (arquivos.length !== 1) {
+          notificar('aviso', 'Solte apenas um PDF por vez.');
+          return;
+        }
+        if (!ehPdf(arquivos[0])) {
+          notificar('aviso', 'O arquivo precisa estar em PDF.');
+          return;
+        }
+        executarAcao(acao, arquivos[0]);
+      },
+    };
   }
 
   async function adicionar(grupo, tipoDoc, arquivo) {
@@ -595,25 +650,49 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
                         const setorGrupoAtivo = setoresAtivos.some(
                           (n) => normalizarChave(n) === normalizarChave(grupo.setor),
                         );
+                        const acao = { tipo: 'adicionar', grupo, tipoDoc: t.valor };
+                        const sobre = alvoArraste === chave;
                         return (
                           <button
                             key={t.valor}
                             type="button"
-                            className="gd-adicionar"
-                            onClick={() => escolherArquivo({ tipo: 'adicionar', grupo, tipoDoc: t.valor })}
+                            className={`gd-adicionar${sobre ? ' arrastando' : ''}`}
+                            onClick={() => escolherArquivo(acao)}
                             disabled={Boolean(ocupado) || !setorGrupoAtivo}
-                            title={setorGrupoAtivo ? `Escolher o PDF do ${t.nome}` : 'Setor desativado'}
+                            title={setorGrupoAtivo ? `Escolher ou arrastar o PDF do ${t.nome}` : 'Setor desativado'}
+                            {...propsSoltar(chave, acao, !ocupado && setorGrupoAtivo)}
                           >
-                            {emAndamento ? 'Publicando...' : <><FiPlus /> Adicionar {t.nome}</>}
+                            {emAndamento ? (
+                              'Publicando...'
+                            ) : sobre ? (
+                              <><FiUploadCloud /> Soltar {t.nome}</>
+                            ) : (
+                              <span className="gd-adicionar__texto">
+                                <span><FiPlus /> Adicionar {t.nome}</span>
+                                <small>ou arraste o PDF aqui</small>
+                              </span>
+                            )}
                           </button>
                         );
                       }
 
                       return (
-                        <div key={t.valor} className="gd-doc" style={{ '--cor-tipo': COR_TIPO[t.valor] }}>
+                        <div
+                          key={t.valor}
+                          className={`gd-doc${alvoArraste === chave ? ' arrastando' : ''}`}
+                          style={{ '--cor-tipo': COR_TIPO[t.valor] }}
+                          title="Arraste um PDF aqui para substituir"
+                          {...propsSoltar(chave, { tipo: 'substituir', documento, grupo }, !ocupado)}
+                        >
                           <span className="gd-doc__info">
                             <b>{t.nome}</b>
-                            <small>{emAndamento ? 'Processando...' : formatarData(documento.criado_em)}</small>
+                            <small>
+                              {emAndamento
+                                ? 'Processando...'
+                                : alvoArraste === chave
+                                  ? 'Soltar para substituir'
+                                  : formatarData(documento.criado_em)}
+                            </small>
                           </span>
                           <span className="gd-doc__acoes">
                             <button
@@ -654,7 +733,8 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
           </section>
 
           <p className="gd-ajuda">
-            Clique em &quot;Adicionar&quot; para escolher o PDF. O número do processo é gerado automaticamente.
+            Clique em &quot;Adicionar&quot; ou arraste o PDF até ele. Para substituir, arraste o novo PDF sobre o documento.
+            O número do processo é gerado automaticamente.
           </p>
         </div>
       </div>
