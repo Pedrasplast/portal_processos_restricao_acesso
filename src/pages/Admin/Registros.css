@@ -157,6 +157,18 @@
   width: 180px;
 }
 
+/* larguras fixas para as etiquetas quebrarem dentro da coluna em vez de alargá-la */
+.rg-tabela .rg-col-setores {
+  width: 240px;
+  min-width: 200px;
+  max-width: 260px;
+}
+
+.rg-tabela .rg-col-tema {
+  width: 190px;
+  min-width: 170px;
+}
+
 /* texto longo: mostra N linhas + "Ver mais" (componente TextoRecolhivel) */
 .rg-recolhivel {
   margin: 0;
@@ -176,20 +188,80 @@
   overflow: visible;
 }
 
+/* etiquetas (setores): limita a N fileiras de etiquetas */
+.rg-recolhivel--etiquetas {
+  --altura-etiqueta: calc(0.72rem * 1.5 + 4px); /* fonte × line-height + padding vertical */
+  --vao-etiqueta: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--vao-etiqueta);
+  max-height: calc(var(--linhas, 2) * var(--altura-etiqueta) + (var(--linhas, 2) - 1) * var(--vao-etiqueta));
+  overflow: hidden;
+  white-space: normal;
+}
+
+.rg-recolhivel--etiquetas.aberto {
+  display: flex;
+  max-height: none;
+}
+
+.rg-recolhivel--etiquetas .rg-setor {
+  line-height: 1.5;
+}
+
+/* "Ver mais" da linha: pílula com olho */
 .rg-ver-mais {
-  margin-top: 4px;
-  padding: 0;
-  color: var(--verde-escuro);
-  background: none;
-  border: 0;
+  margin-top: 8px;
+  padding: 3px 10px 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--tipo-manual);
+  background: #f0f5fc;
+  border: 1px solid #c6d6ee;
+  border-radius: 999px;
   font: inherit;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 650;
+  line-height: 1.4;
   cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.rg-ver-mais svg {
+  flex: 0 0 auto;
+  font-size: 0.9rem;
 }
 
 .rg-ver-mais:hover {
-  text-decoration: underline;
+  background: #e3ecf8;
+  border-color: var(--tipo-manual);
+}
+
+.rg-ver-mais:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+
+/* aberto: tom neutro para "Ver menos" */
+.rg-ver-mais[aria-expanded='true'] {
+  color: var(--texto-2);
+  background: var(--superficie-2);
+  border-color: var(--linha);
+}
+
+.rg-ver-mais[aria-expanded='true']:hover {
+  border-color: var(--linha-forte);
+}
+
+/* "+ N arquivos" (escondidos até abrir a linha pelo "Ver mais") */
+.rg-mais-arquivos {
+  margin-top: 4px;
+  display: block;
+  color: var(--texto-3);
+  font-size: 0.74rem;
+  font-weight: 600;
 }
 
 .rg-vazio-cel {
@@ -204,6 +276,99 @@
   width: 1%;
   white-space: nowrap;
   text-align: right;
+}
+
+/* ---------- paginação ---------- */
+
+.rg-paginacao {
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  border-top: 1px solid var(--linha);
+}
+
+.rg-paginacao__info {
+  color: var(--texto-2);
+  font-size: 0.8rem;
+}
+
+.rg-paginacao__info b {
+  color: var(--texto);
+  font-weight: 650;
+}
+
+.rg-paginacao__botoes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rg-pagina {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--texto-2);
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-sm);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.rg-pagina:hover:not(:disabled):not(.atual) {
+  color: var(--marinho);
+  border-color: var(--marinho-2);
+  background: var(--marinho-claro);
+}
+
+.rg-pagina:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+
+.rg-pagina.atual {
+  color: #fff;
+  background: var(--marinho);
+  border-color: var(--marinho);
+  cursor: default;
+}
+
+.rg-pagina:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rg-pagina--seta svg {
+  font-size: 1rem;
+}
+
+.rg-pagina--reticencias {
+  min-width: 20px;
+  padding: 0;
+  color: var(--texto-3);
+  background: none;
+  border: 0;
+  cursor: default;
+}
+
+@media (max-width: 480px) {
+  .rg-paginacao {
+    justify-content: center;
+  }
+}
+
+/* cabeçalho "Ações" centralizado sobre o lápis e a lixeira */
+.rg-tabela th.rg-th-acoes {
+  width: 1%;
+  text-align: center;
 }
 
 /* editar / excluir: componente global BotaoAcao (components/ui) */
@@ -238,6 +403,25 @@
 .rg-tema-tag {
   color: var(--verde-escuro);
   background: var(--verde-claro);
+}
+
+/*
+ * Tema na tabela: mesma pílula do setor. Se o nome quebrar, cada linha
+ * vira uma pílula (box-decoration-break), com o mesmo vão das etiquetas.
+ */
+.rg-recolhivel.rg-tema-linhas {
+  font-size: 0.72rem;
+  line-height: calc(0.72rem * 1.5 + 8px); /* altura da pílula + vão de 4px */
+  white-space: normal;
+  overflow-wrap: normal; /* quebra só entre palavras, nunca no meio */
+  word-break: normal;
+}
+
+.rg-tema-linhas .rg-tema-tag {
+  line-height: 1.5;
+  white-space: normal;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 /* ---------- arquivos ---------- */
@@ -389,8 +573,128 @@ button.rg-arquivo:hover:not(:disabled) {
   margin-bottom: 8px;
 }
 
-.rg-upload {
-  min-height: 52px;
+/* área de arrastar e soltar arquivos */
+
+.rg-dropzone {
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--texto-2);
+  background: var(--superficie-2);
+  border: 2px dashed var(--linha-forte);
+  border-radius: var(--raio-lg);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.rg-dropzone:hover {
+  background: var(--marinho-claro);
+  border-color: var(--marinho-2);
+}
+
+.rg-dropzone:focus-within {
+  border-color: var(--verde);
+  box-shadow: var(--foco);
+}
+
+.rg-dropzone__icone {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--marinho);
+  font-size: 1.35rem;
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: 50%;
+  transition: color 0.15s, background-color 0.15s, transform 0.2s;
+}
+
+.rg-dropzone__texto {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.rg-dropzone__texto strong {
+  color: var(--texto);
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.rg-dropzone__texto small {
+  color: var(--texto-3);
+  font-size: 0.74rem;
+}
+
+.rg-dropzone__botao {
+  padding: 6px 14px;
+  color: var(--marinho);
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--superficie);
+  border: 1px solid var(--linha-forte);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.rg-dropzone:hover .rg-dropzone__botao {
+  border-color: var(--marinho-2);
+}
+
+/* arquivo sendo arrastado por cima */
+.rg-dropzone.arrastando {
+  background: var(--verde-claro);
+  border-style: solid;
+  border-color: var(--verde);
+}
+
+.rg-dropzone.arrastando .rg-dropzone__icone {
+  color: var(--superficie);
+  background: var(--verde);
+  border-color: var(--verde);
+  transform: translateY(-3px);
+}
+
+.rg-dropzone.arrastando strong {
+  color: var(--verde-escuro);
+}
+
+/* já tem arquivos na lista: fica numa linha só */
+.rg-dropzone.compacta {
+  padding: 10px 14px;
+  flex-direction: row;
+  gap: 12px;
+  text-align: left;
+}
+
+.rg-dropzone.compacta .rg-dropzone__icone {
+  width: 34px;
+  height: 34px;
+  font-size: 1.05rem;
+}
+
+.rg-dropzone.compacta .rg-dropzone__texto {
+  flex: 1;
+}
+
+.rg-dropzone.compacta .rg-dropzone__texto strong {
+  font-size: 0.86rem;
+}
+
+.rg-dropzone.desativada {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .rg-dropzone.compacta .rg-dropzone__botao {
+    display: none;
+  }
 }
 
 /* escolha de setores */
@@ -623,6 +927,13 @@ button.rg-arquivo:hover:not(:disabled) {
 
   .rg-tabela .rg-arquivos {
     width: auto;
+  }
+
+  .rg-tabela .rg-col-setores,
+  .rg-tabela .rg-col-tema {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
   }
 }
 

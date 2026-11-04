@@ -1,49 +1,58 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 
 /*
- * Mostra só as primeiras `linhas` do texto, com "Ver mais" / "Ver menos".
- * O botão só aparece quando o texto realmente passa do limite
- * (medido na tela, então funciona em qualquer largura).
+ * Mostra só as primeiras `linhas` do conteúdo; com `aberto`, mostra tudo.
+ * Não tem botão próprio: avisa por `onCortado(chave, true/false)` se o
+ * conteúdo passa do limite (medido na tela, funciona em qualquer largura),
+ * e quem usa decide onde fica o "Ver mais" (ver LinhaRegistro).
+ *
+ * - Texto: passe `texto` (corta com "…" na última linha).
+ * - Etiquetas (setores etc.): passe `children` e `variante="etiquetas"`
+ *   (limita a N fileiras de etiquetas).
  */
-function TextoRecolhivel({ texto, linhas = 3 }) {
-  const paragrafo = useRef(null);
-  const [aberto, setAberto] = useState(false);
-  const [cortado, setCortado] = useState(false);
+function TextoRecolhivel({
+  texto,
+  children,
+  linhas = 2,
+  variante = 'texto',
+  className = '',
+  aberto = false,
+  chave,
+  onCortado,
+}) {
+  const caixa = useRef(null);
+  const conteudo = children ?? texto;
+  const vazio = !conteudo || (Array.isArray(conteudo) && conteudo.length === 0);
 
   useLayoutEffect(() => {
-    const elemento = paragrafo.current;
-    if (!elemento || aberto) return undefined;
+    const elemento = caixa.current;
+    if (!elemento) {
+      onCortado?.(chave, false);
+      return undefined;
+    }
+    /* Aberto, tudo aparece: mantém a última medição para o botão continuar visível. */
+    if (aberto) return undefined;
 
-    const medir = () => setCortado(elemento.scrollHeight > elemento.clientHeight + 1);
+    const medir = () => onCortado?.(chave, elemento.scrollHeight > elemento.clientHeight + 1);
     medir();
 
     const observador = new ResizeObserver(medir);
     observador.observe(elemento);
     return () => observador.disconnect();
-  }, [texto, linhas, aberto]);
+  }, [conteudo, linhas, aberto, chave, onCortado]);
 
-  if (!texto) return <span className="rg-vazio-cel">—</span>;
+  if (vazio) return <span className="rg-vazio-cel">—</span>;
+
+  const Tag = variante === 'texto' ? 'p' : 'div';
 
   return (
-    <>
-      <p
-        ref={paragrafo}
-        className={`rg-recolhivel${aberto ? ' aberto' : ''}`}
-        style={{ '--linhas': linhas }}
-      >
-        {texto}
-      </p>
-      {(cortado || aberto) && (
-        <button
-          type="button"
-          className="rg-ver-mais"
-          onClick={() => setAberto((valor) => !valor)}
-          aria-expanded={aberto}
-        >
-          {aberto ? 'Ver menos' : 'Ver mais'}
-        </button>
-      )}
-    </>
+    <Tag
+      ref={caixa}
+      className={`rg-recolhivel rg-recolhivel--${variante}${aberto ? ' aberto' : ''} ${className}`.trim()}
+      style={{ '--linhas': linhas }}
+    >
+      {conteudo}
+    </Tag>
   );
 }
 

@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { FiPlus, FiSearch, FiTag } from 'react-icons/fi';
 
-import { BotaoEditar, BotaoExcluir } from '../../../../components/ui/BotaoAcao';
 import { useFeedback } from '../../../../hooks/useFeedback';
 import { useRegistros } from '../../../../hooks/useRegistros';
 import { useSetores } from '../../../../hooks/useSetores';
@@ -17,11 +16,14 @@ import {
   nomeDoMes,
   temFiltroAtivo,
 } from '../../../../utils/registros';
-import ArquivosRegistro from './ArquivosRegistro';
 import CardIndicador from './CardIndicador';
+import LinhaRegistro from './LinhaRegistro';
 import RegistroDialog from './RegistroDialog';
+import Paginacao from './Paginacao';
 import TemasDialog from './TemasDialog';
-import TextoRecolhivel from './TextoRecolhivel';
+
+/* Quantos registros aparecem por página na tabela. */
+const REGISTROS_POR_PAGINA = 8;
 
 /* Administração > Registros: lista no formato da planilha + filtros. */
 function RegistrosPanel() {
@@ -33,8 +35,20 @@ function RegistrosPanel() {
   const [filtros, setFiltros] = useState(FILTROS_VAZIOS);
   const [dialogo, setDialogo] = useState(null); // { tipo: 'registro', registro } | { tipo: 'temas' }
   const [excluindoId, setExcluindoId] = useState(null);
+  const [pagina, setPagina] = useState(1);
+  const topoLista = useRef(null);
 
   const visiveis = useMemo(() => filtrarRegistros(registros, filtros), [registros, filtros]);
+
+  /* Paginação: se a lista encolher (exclusão, filtro), não fica numa página vazia. */
+  const totalPaginas = Math.max(1, Math.ceil(visiveis.length / REGISTROS_POR_PAGINA));
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const daPagina = visiveis.slice((paginaAtual - 1) * REGISTROS_POR_PAGINA, paginaAtual * REGISTROS_POR_PAGINA);
+
+  function irParaPagina(numero) {
+    setPagina(numero);
+    topoLista.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   /* Indicadores: contam o que está visível (respeitam busca e filtros). */
   const mesAtual = mesAtualISO();
@@ -46,6 +60,12 @@ function RegistrosPanel() {
 
   function mudarFiltro(campo, valor) {
     setFiltros((atual) => ({ ...atual, [campo]: valor }));
+    setPagina(1);
+  }
+
+  function limparFiltros() {
+    setFiltros(FILTROS_VAZIOS);
+    setPagina(1);
   }
 
   async function excluir(registro) {
@@ -150,7 +170,7 @@ function RegistrosPanel() {
           </select>
 
           {filtrando && (
-            <button type="button" className="btn btn-ghost btn-sm rg-filtros__limpar" onClick={() => setFiltros(FILTROS_VAZIOS)}>
+            <button type="button" className="btn btn-ghost btn-sm rg-filtros__limpar" onClick={limparFiltros}>
               Limpar filtros
             </button>
           )}
@@ -172,7 +192,8 @@ function RegistrosPanel() {
             {filtrando ? 'Nenhum registro encontrado com esses filtros.' : 'Nenhum registro ainda. Clique em "Novo registro" para começar.'}
           </p>
         ) : (
-          <div className="rg-tabela-wrap">
+          <>
+          <div className="rg-tabela-wrap" ref={topoLista}>
             <table className="rg-tabela">
               <thead>
                 <tr>
@@ -182,41 +203,30 @@ function RegistrosPanel() {
                   <th scope="col">Participantes</th>
                   <th scope="col">Data</th>
                   <th scope="col">Registro</th>
-                  <th scope="col"><span className="sr-only">Ações</span></th>
+                  <th scope="col" className="rg-th-acoes">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {visiveis.map((registro) => (
-                  <tr key={registro.id}>
-                    <td data-rotulo="Setor(es)">
-                      <span className="rg-setores">
-                        {registro.setores.map((s) => <span key={s.id} className="rg-setor">{s.nome}</span>)}
-                      </span>
-                    </td>
-                    <td data-rotulo="Tema"><span className="rg-tema-tag">{registro.tema?.nome}</span></td>
-                    <td data-rotulo="Pauta" className="rg-texto"><TextoRecolhivel texto={registro.pauta} linhas={3} /></td>
-                    <td data-rotulo="Participantes" className="rg-texto"><TextoRecolhivel texto={registro.participantes} linhas={2} /></td>
-                    <td data-rotulo="Data" className="numero rg-data">{formatarDataRegistro(registro.data)}</td>
-                    <td data-rotulo="Registro"><ArquivosRegistro arquivos={registro.arquivos} /></td>
-                    <td className="rg-acoes">
-                      <div className="rg-acoes__botoes">
-                        <BotaoEditar
-                          rotulo="Editar registro"
-                          onClick={() => setDialogo({ tipo: 'registro', registro })}
-                          disabled={excluindoId === registro.id}
-                        />
-                        <BotaoExcluir
-                          rotulo="Excluir registro"
-                          onClick={() => excluir(registro)}
-                          disabled={excluindoId === registro.id}
-                        />
-                      </div>
-                    </td>
-                  </tr>
+                {daPagina.map((registro) => (
+                  <LinhaRegistro
+                    key={registro.id}
+                    registro={registro}
+                    onEditar={() => setDialogo({ tipo: 'registro', registro })}
+                    onExcluir={() => excluir(registro)}
+                    excluindo={excluindoId === registro.id}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
+
+          <Paginacao
+            pagina={paginaAtual}
+            totalItens={visiveis.length}
+            porPagina={REGISTROS_POR_PAGINA}
+            onMudar={irParaPagina}
+          />
+          </>
         )}
       </section>
 
