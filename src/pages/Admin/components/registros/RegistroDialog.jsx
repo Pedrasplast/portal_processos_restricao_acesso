@@ -13,6 +13,9 @@ import { enviarArquivos, excluirArquivo, salvarRegistro } from '../../../../serv
 import { hojeISO, validarArquivo } from '../../../../utils/registros';
 import { ArquivoRemovivel } from './ArquivosRegistro';
 
+/* O arraste traz arquivos do computador (e não texto ou link)? */
+const arrastaArquivo = (event) => Array.from(event.dataTransfer?.types || []).includes('Files');
+
 /*
  * Janela "Novo registro" / "Editar registro".
  * Ordem ao salvar: registro + setores -> remove arquivos marcados -> envia novos.
@@ -29,6 +32,7 @@ function RegistroDialog({ registro, setores, temas, onFechar, onSalvo }) {
   const [removidos, setRemovidos] = useState(() => new Set());
   const [novos, setNovos] = useState([]);
   const [salvando, setSalvando] = useState(false);
+  const [arrastando, setArrastando] = useState(false);
   const primeiroCampo = useRef(null);
 
   /* Ativos + os que já eram do registro ao abrir (mesmo se desativados). */
@@ -49,6 +53,19 @@ function RegistroDialog({ registro, setores, temas, onFechar, onSalvo }) {
     return () => document.removeEventListener('keydown', aoTeclar);
   }, [onFechar, salvando]);
 
+  /* Um arquivo solto fora da área de soltar não deve abrir no lugar do portal. */
+  useEffect(() => {
+    const bloquear = (event) => {
+      if (arrastaArquivo(event)) event.preventDefault();
+    };
+    window.addEventListener('dragover', bloquear);
+    window.addEventListener('drop', bloquear);
+    return () => {
+      window.removeEventListener('dragover', bloquear);
+      window.removeEventListener('drop', bloquear);
+    };
+  }, []);
+
   function alternarSetor(id) {
     setSetorIds((atual) => {
       const proximo = new Set(atual);
@@ -58,9 +75,35 @@ function RegistroDialog({ registro, setores, temas, onFechar, onSalvo }) {
     });
   }
 
-  function adicionarArquivos(event) {
+  function escolherArquivos(event) {
     const escolhidos = Array.from(event.target.files || []);
     event.target.value = '';
+    adicionarArquivos(escolhidos);
+  }
+
+  /* --- arrastar e soltar arquivos na área "Adicionar arquivos" --- */
+
+  function aoArrastarSobre(event) {
+    if (!arrastaArquivo(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    if (!arrastando) setArrastando(true);
+  }
+
+  function aoSairDoArraste(event) {
+    if (!event.currentTarget.contains(event.relatedTarget)) setArrastando(false);
+  }
+
+  function aoSoltar(event) {
+    if (!arrastaArquivo(event)) return;
+    event.preventDefault();
+    setArrastando(false);
+    if (salvando) return;
+    adicionarArquivos(Array.from(event.dataTransfer.files || []));
+  }
+
+  function adicionarArquivos(escolhidos) {
+    if (!escolhidos.length) return;
 
     const erros = [];
     const validos = [];
@@ -237,18 +280,36 @@ function RegistroDialog({ registro, setores, temas, onFechar, onSalvo }) {
             )}
 
             {totalArquivos < MAX_ARQUIVOS_POR_REGISTRO && (
-              <label className="upload rg-upload">
-                <FiUploadCloud aria-hidden="true" />
-                <span>
-                  <strong>Adicionar arquivos</strong>
+              <label
+                className={`rg-dropzone${arrastando ? ' arrastando' : ''}${totalArquivos > 0 ? ' compacta' : ''}${salvando ? ' desativada' : ''}`}
+                onDragOver={aoArrastarSobre}
+                onDragLeave={aoSairDoArraste}
+                onDrop={aoSoltar}
+              >
+                <span className="rg-dropzone__icone" aria-hidden="true">
+                  <FiUploadCloud />
+                </span>
+                <span className="rg-dropzone__texto">
+                  <strong>
+                    {arrastando
+                      ? 'Pode soltar!'
+                      : totalArquivos > 0
+                        ? 'Arraste mais arquivos para cá'
+                        : 'Arraste e solte os arquivos aqui'}
+                  </strong>
                   <small>PDF, Word, PowerPoint, Excel, TXT ou foto · até {LIMITE_ARQUIVO_MB} MB cada</small>
                 </span>
+                {!arrastando && (
+                  <span className="rg-dropzone__botao">
+                    {totalArquivos > 0 ? 'Escolher' : 'ou escolha no computador'}
+                  </span>
+                )}
                 <input
                   className="sr-only"
                   type="file"
                   multiple
                   accept={ACCEPT_ARQUIVOS}
-                  onChange={adicionarArquivos}
+                  onChange={escolherArquivos}
                   disabled={salvando}
                 />
               </label>

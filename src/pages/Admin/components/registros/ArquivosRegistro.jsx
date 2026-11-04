@@ -6,8 +6,8 @@ import { useFeedback } from '../../../../hooks/useFeedback';
 import { abrirArquivoRegistro } from '../../../../utils/arquivosRegistro';
 import { formatarTamanho, tipoDoArquivo } from '../../../../utils/registros';
 
-/* Quantos arquivos aparecem na tabela antes do "+ N arquivos". */
-const ARQUIVOS_VISIVEIS = 2;
+/* Quantos arquivos aparecem na tabela antes do "Ver mais" da linha. */
+export const ARQUIVOS_VISIVEIS = 2;
 
 const ICONE_CATEGORIA = {
   pdf: FiFileText,
@@ -36,11 +36,10 @@ export function RotuloArquivo({ nome, tamanho }) {
   );
 }
 
-/* Arquivos de um registro na tabela: clicar abre ou baixa. */
-function ArquivosRegistro({ arquivos }) {
+/* Arquivos de um registro na tabela: clicar abre ou baixa. `aberto` mostra todos. */
+function ArquivosRegistro({ arquivos, aberto = false }) {
   const { notificar } = useFeedback();
   const [abrindoId, setAbrindoId] = useState(null);
-  const [verTodos, setVerTodos] = useState(false);
 
   if (!arquivos.length) return <span className="rg-sem-arquivo">sem arquivo</span>;
 
@@ -57,7 +56,7 @@ function ArquivosRegistro({ arquivos }) {
   }
 
   const escondidos = arquivos.length - ARQUIVOS_VISIVEIS;
-  const lista = verTodos || escondidos <= 0 ? arquivos : arquivos.slice(0, ARQUIVOS_VISIVEIS);
+  const lista = aberto || escondidos <= 0 ? arquivos : arquivos.slice(0, ARQUIVOS_VISIVEIS);
 
   return (
     <>
@@ -76,10 +75,8 @@ function ArquivosRegistro({ arquivos }) {
           </li>
         ))}
       </ul>
-      {escondidos > 0 && (
-        <button type="button" className="rg-ver-mais" onClick={() => setVerTodos((valor) => !valor)} aria-expanded={verTodos}>
-          {verTodos ? 'Ver menos' : `+ ${escondidos} ${escondidos === 1 ? 'arquivo' : 'arquivos'}`}
-        </button>
+      {escondidos > 0 && !aberto && (
+        <small className="rg-mais-arquivos">+ {escondidos} {escondidos === 1 ? 'arquivo' : 'arquivos'}</small>
       )}
     </>
   );
