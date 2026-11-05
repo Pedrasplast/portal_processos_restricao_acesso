@@ -268,7 +268,7 @@ function Repository() {
                           onClick={() => handleDownload(arquivo)}
                           disabled={baixandoId === arquivo.id}
                           aria-label={`Baixar ${tipo.nome} de ${grupo.titulo}`}
-                          title="Baixar PDF"
+                          title="Baixar arquivo"
                         >
                           <FiDownload />
                         </button>

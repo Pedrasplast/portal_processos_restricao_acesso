@@ -1,3 +1,4 @@
+import { TIPOS_ARQUIVO_DOCUMENTO } from '../config/documentos';
 import { normalizarChave, normalizarTexto } from './texto';
 
 const ORDEM_TIPOS = {
@@ -328,4 +329,26 @@ export function tiposDoNumero(
   );
 
   return grupo ? Object.keys(grupo.arquivos) : [];
+}
+
+/* ---------- arquivo do documento (PDF ou imagem) ---------- */
+
+const extensao = (nome = '') => {
+  const partes = String(nome).toLowerCase().split('.');
+  return partes.length > 1 ? partes.pop() : '';
+};
+
+/** Tipo (MIME) do arquivo para o Storage, ou null se não é aceito. */
+export function tipoArquivoDocumento(arquivo) {
+  const porExtensao = TIPOS_ARQUIVO_DOCUMENTO[extensao(arquivo?.name)];
+  if (porExtensao) return porExtensao;
+  return Object.values(TIPOS_ARQUIVO_DOCUMENTO).includes(arquivo?.type) ? arquivo.type : null;
+}
+
+export const arquivoDocumentoAceito = (arquivo) => Boolean(tipoArquivoDocumento(arquivo));
+
+/** Extensão do arquivo salvo ("pdfs/.../x.png" -> "png"); antigos sem extensão = "pdf". */
+export function extensaoDoDocumento(storagePath = '') {
+  const ext = extensao(String(storagePath).split('/').pop());
+  return TIPOS_ARQUIVO_DOCUMENTO[ext] ? ext : 'pdf';
 }
