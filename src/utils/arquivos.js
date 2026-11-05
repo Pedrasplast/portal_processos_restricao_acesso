@@ -1,12 +1,13 @@
 import { gerarLinkDocumento } from '../services/documentosService';
+import { extensaoDoDocumento } from './documentos';
 
 function nomeParaDownload(arquivo) {
   const base = [arquivo.tipo, arquivo.descricao].filter(Boolean).join(' - ') || 'documento';
-  return `${base}.pdf`.replace(/[\\/:*?"<>|]/g, '-');
+  return `${base}.${extensaoDoDocumento(arquivo.storage_path)}`.replace(/[\\/:*?"<>|]/g, '-');
 }
 
 /*
- * Abre o PDF em nova aba usando um link assinado (temporário).
+ * Abre o documento (PDF ou imagem) em nova aba usando um link assinado (temporário).
  * A aba é aberta ANTES de gerar o link para não ser bloqueada pelo
  * bloqueador de pop-ups (o navegador só permite pop-up no clique).
  * Em caso de falha, lança um Error com mensagem pronta para exibir.
@@ -33,7 +34,7 @@ export async function visualizarDocumento(arquivo) {
 }
 
 /*
- * Baixa o PDF direto do Storage (o link já vem com o nome do arquivo),
+ * Baixa o documento direto do Storage (o link já vem com o nome do arquivo),
  * sem carregar o arquivo inteiro na memória do navegador.
  */
 export async function baixarDocumento(arquivo) {

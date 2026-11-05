@@ -1,3 +1,4 @@
+import { LIMITE_DOCUMENTO_MB, TIPOS_DOCUMENTO_TEXTO } from '../config/documentos';
 import { supabase } from '../lib/supabase';
 import {
   analisarTituloDocumento,
@@ -6,6 +7,7 @@ import {
   normalizarDescricaoDocumento,
   normalizarDocumentos,
   normalizarTipoDocumento,
+  tipoArquivoDocumento,
 } from '../utils/documentos';
 import { normalizarChave, sanitizarNomeArquivo } from '../utils/texto';
 
@@ -162,20 +164,14 @@ async function prepararPublicacao({
   };
 }
 
-const LIMITE_MB = 20;
-
 /* Valida o arquivo antes de enviar (o bucket também recusa). */
-function validarPdf(arquivo) {
-  const ehPdf =
-    arquivo?.type === 'application/pdf' ||
-    arquivo?.name?.toLowerCase().endsWith('.pdf');
-
-  if (!ehPdf) {
-    throw new Error('O arquivo selecionado deve estar em PDF.');
+function validarArquivo(arquivo) {
+  if (!tipoArquivoDocumento(arquivo)) {
+    throw new Error(`O arquivo deve ser ${TIPOS_DOCUMENTO_TEXTO}.`);
   }
 
-  if (arquivo.size > LIMITE_MB * 1024 * 1024) {
-    throw new Error(`O PDF passa de ${LIMITE_MB} MB. Reduza o arquivo e tente novamente.`);
+  if (arquivo.size > LIMITE_DOCUMENTO_MB * 1024 * 1024) {
+    throw new Error(`O arquivo passa de ${LIMITE_DOCUMENTO_MB} MB. Reduza o arquivo e tente novamente.`);
   }
 }
 
@@ -197,7 +193,7 @@ async function enviarArquivo(caminho, arquivo) {
   const { error } = await supabase.storage
     .from(BUCKET)
     .upload(caminho, arquivo, {
-      contentType: 'application/pdf',
+      contentType: tipoArquivoDocumento(arquivo),
       upsert: false,
     });
 
@@ -211,7 +207,7 @@ export async function publicarDocumento({
   descricao,
   arquivo,
 }) {
-  validarPdf(arquivo);
+  validarArquivo(arquivo);
 
   const publicacao = await prepararPublicacao({
     setor,
@@ -258,12 +254,12 @@ export async function publicarDocumento({
 }
 
 /*
- * Troca o PDF de um documento já publicado: envia o novo arquivo,
+ * Troca o arquivo de um documento já publicado: envia o novo arquivo,
  * aponta o documento para ele (com nova data de publicação) e só então
  * apaga o arquivo antigo.
  */
 export async function substituirDocumento(documento, arquivo) {
-  validarPdf(arquivo);
+  validarArquivo(arquivo);
 
   const caminho = montarCaminho({
     setor: documento.setor,
@@ -286,7 +282,7 @@ export async function substituirDocumento(documento, arquivo) {
 
   if (documento.storage_path) {
     const { error: erroRemocao } = await supabase.storage.from(BUCKET).remove([documento.storage_path]);
-    if (erroRemocao) console.warn('PDF novo publicado, mas o antigo não foi apagado:', erroRemocao);
+    if (erroRemocao) console.warn('Arquivo novo publicado, mas o antigo não foi apagado:', erroRemocao);
   }
 }
 
@@ -318,9 +314,9 @@ export async function renomearProcesso(grupo, descricao) {
 }
 
 /*
- * Remove primeiro a linha do banco (o que o usuário vê) e depois o PDF.
+ * Remove primeiro a linha do banco (o que o usuário vê) e depois o arquivo.
  * Se a remoção do arquivo falhar, sobra só um arquivo órfão, nunca uma
- * linha apontando para um PDF inexistente.
+ * linha apontando para um arquivo inexistente.
  */
 export async function excluirDocumento(documento) {
   const { error } = await supabase
@@ -336,13 +332,13 @@ export async function excluirDocumento(documento) {
       .remove([documento.storage_path]);
 
     if (storageError) {
-      console.warn('Documento removido, mas o PDF não foi apagado:', storageError);
+      console.warn('Documento removido, mas o arquivo não foi apagado:', storageError);
     }
   }
 }
 
 /*
- * Gera um link temporário para o PDF. Com `nomeDownload`, o navegador
+ * Gera um link temporário para o arquivo (PDF ou imagem). Com `nomeDownload`, o navegador
  * baixa o arquivo com esse nome em vez de abri-lo.
  */
 export async function gerarLinkDocumento(storagePath, { nomeDownload } = {}) {

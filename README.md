@@ -27,6 +27,7 @@ A configuração está em `supabase/migrations/`, para rodar no SQL Editor nesta
 9. `20261029_renomear_processo.sql` — admin pode editar o nome (descrição) de um processo
 10. `20261029b_registros.sql` — aba Registros (temas, registros, setores, arquivos e bucket `registros`)
 11. `20261029c_setores_vinculos.sql` — setores mostram e bloqueiam exclusão por documentos e registros
+12. `20261105_documentos_imagens.sql` — documentos (POP, Fluxograma, Manual) aceitam PDF e imagem (JPG, PNG, WEBP)
 
 Tabelas:
 
@@ -43,7 +44,7 @@ Tabelas:
 | `convites` | Links de convite (uso único, com validade). Sem acesso direto: só via funções. |
 | `usuarios_pops` | Legado, não usado pelo front (só admin acessa). |
 
-Bucket `pops`: **privado**, só PDF, até 20 MB. O front gera links assinados
+Bucket `pops`: **privado**, PDF ou imagem (JPG, PNG, WEBP), até 20 MB. O front gera links assinados
 de 5 minutos para visualizar/baixar.
 
 ### Como o acesso é garantido
@@ -62,7 +63,7 @@ A regra fica no banco (RLS), não só na tela:
 - **Convites:** na aba Usuários, "Gerar link de convite" cria um link
   `/cadastro?convite=...` de uso único (1, 7 ou 30 dias, opcionalmente
   preso a um e-mail). Quem se cadastra por ele já entra liberado.
-- Só admin publica e exclui documentos e PDFs.
+- Só admin publica e exclui documentos e seus arquivos (PDF ou imagem).
 - Ninguém altera `profiles` pelo app (não dá para se promover a admin).
   Para tornar alguém admin:
   `update public.profiles set regra = 'admin' where email = '...';`

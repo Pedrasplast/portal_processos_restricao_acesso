@@ -11,7 +11,8 @@ import {
 } from 'react-icons/fi';
 import { useSearchParams } from 'react-router-dom';
 
-import { TIPOS_DOCUMENTO } from '../../../config/documentos';
+import { BotaoEditar } from '../../../components/ui/BotaoAcao';
+import { ACCEPT_DOCUMENTO, LIMITE_DOCUMENTO_MB, TIPOS_DOCUMENTO, TIPOS_DOCUMENTO_TEXTO } from '../../../config/documentos';
 import { useFeedback } from '../../../hooks/useFeedback';
 import { useSetores } from '../../../hooks/useSetores';
 import {
@@ -20,7 +21,7 @@ import {
   renomearProcesso,
   substituirDocumento,
 } from '../../../services/documentosService';
-import { agruparDocumentos, obterNumeracaoDocumento } from '../../../utils/documentos';
+import { agruparDocumentos, arquivoDocumentoAceito, obterNumeracaoDocumento } from '../../../utils/documentos';
 import { normalizarChave } from '../../../utils/texto';
 
 const COR_TIPO = {
@@ -37,7 +38,6 @@ function formatarData(valor) {
   return Number.isNaN(data.getTime()) ? '' : data.toLocaleDateString('pt-BR');
 }
 
-const ehPdf = (arquivo) => arquivo?.type === 'application/pdf' || arquivo?.name?.toLowerCase().endsWith('.pdf');
 
 /* O arraste traz arquivos do computador (e não texto ou link)? */
 const arrastaArquivo = (event) => Array.from(event.dataTransfer?.types || []).includes('Files');
@@ -46,7 +46,7 @@ const tamanho = (bytes) =>
   bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 /* ------------------------------------------------------------------
-   Janela "Novo processo": setor, descrição, tipo e PDF.
+   Janela "Novo processo": setor, descrição, tipo e arquivo (PDF ou imagem).
 ------------------------------------------------------------------- */
 function NovoProcesso({ documentos, setoresAtivos, setorInicial, onFechar, onPublicado }) {
   const { notificar } = useFeedback();
@@ -73,7 +73,7 @@ function NovoProcesso({ documentos, setoresAtivos, setorInicial, onFechar, onPub
     event.preventDefault();
     if (!setor) return notificar('aviso', 'Escolha o setor.');
     if (descricao.trim().length < 3) return notificar('aviso', 'Informe a descrição do processo (mínimo de 3 letras).');
-    if (!arquivo) return notificar('aviso', 'Escolha o arquivo PDF.');
+    if (!arquivo) return notificar('aviso', 'Escolha o arquivo (PDF ou imagem).');
 
     setSalvando(true);
     try {
@@ -171,13 +171,13 @@ function NovoProcesso({ documentos, setoresAtivos, setorInicial, onFechar, onPub
           <label className={`upload${arquivo ? ' com-arquivo' : ''}`}>
             <FiUploadCloud aria-hidden="true" />
             <span>
-              <strong>{arquivo ? arquivo.name : 'Selecionar PDF'}</strong>
-              <small>{arquivo ? tamanho(arquivo.size) : 'Somente PDF, até 20 MB'}</small>
+              <strong>{arquivo ? arquivo.name : 'Selecionar arquivo'}</strong>
+              <small>{arquivo ? tamanho(arquivo.size) : `${TIPOS_DOCUMENTO_TEXTO}, até ${LIMITE_DOCUMENTO_MB} MB`}</small>
             </span>
             <input
               className="sr-only"
               type="file"
-              accept="application/pdf,.pdf"
+              accept={ACCEPT_DOCUMENTO}
               onChange={(e) => setArquivo(e.target.files?.[0] || null)}
               disabled={salvando}
             />
@@ -298,7 +298,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
 
   const grupos = useMemo(() => agruparDocumentos(documentos), [documentos]);
 
-  /* Um PDF solto fora das áreas de soltar não deve abrir no lugar do portal. */
+  /* Um arquivo solto fora das áreas de soltar não deve abrir no lugar do portal. */
   useEffect(() => {
     const bloquear = (event) => {
       if (arrastaArquivo(event)) event.preventDefault();
@@ -386,7 +386,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
     if (acao.tipo === 'substituir') await substituir(acao.documento, acao.grupo, arquivo);
   }
 
-  /* --- arrastar e soltar um PDF direto no "Adicionar" ou no card do documento --- */
+  /* --- arrastar e soltar um arquivo direto no "Adicionar" ou no card do documento --- */
 
   function propsSoltar(chave, acao, habilitado) {
     if (!habilitado) return {};
@@ -406,11 +406,11 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
         setAlvoArraste(null);
         const arquivos = Array.from(event.dataTransfer.files || []);
         if (arquivos.length !== 1) {
-          notificar('aviso', 'Solte apenas um PDF por vez.');
+          notificar('aviso', 'Solte apenas um arquivo por vez.');
           return;
         }
-        if (!ehPdf(arquivos[0])) {
-          notificar('aviso', 'O arquivo precisa estar em PDF.');
+        if (!arquivoDocumentoAceito(arquivos[0])) {
+          notificar('aviso', `O arquivo precisa ser ${TIPOS_DOCUMENTO_TEXTO}.`);
           return;
         }
         executarAcao(acao, arquivos[0]);
@@ -447,7 +447,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
 
   async function substituir(documento, grupo, arquivo) {
     const ok = await confirmar({
-      titulo: 'Substituir PDF',
+      titulo: 'Substituir arquivo',
       mensagem: `O ${nomeTipo(documento.tipo)} de ${grupo.titulo} passará a ser ${arquivo.name}.`,
       detalhe: 'O arquivo anterior é apagado e a data de publicação é atualizada.',
       textoConfirmar: 'Substituir',
@@ -460,7 +460,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
       notificar('sucesso', `${nomeTipo(documento.tipo)} de ${grupo.titulo} substituído.`);
       await onReload();
     } catch (error) {
-      notificar('erro', error.message || 'Não foi possível substituir o PDF.');
+      notificar('erro', error.message || 'Não foi possível substituir o arquivo.');
     } finally {
       setOcupado(null);
     }
@@ -470,7 +470,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
     const ok = await confirmar({
       titulo: 'Excluir documento',
       mensagem: `O ${nomeTipo(documento.tipo)} de ${grupo.titulo} será removido do repositório.`,
-      detalhe: 'O PDF também é apagado. Esta ação não pode ser desfeita.',
+      detalhe: 'O arquivo também é apagado. Esta ação não pode ser desfeita.',
       textoConfirmar: 'Excluir documento',
       perigo: true,
     });
@@ -514,7 +514,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
       <header className="page-header">
         <div>
           <h1>Gerenciar documentos</h1>
-          <p>Escolha o setor e publique, substitua ou exclua os PDFs de cada processo, ou edite o nome do processo.</p>
+          <p>Escolha o setor e publique, substitua ou exclua os arquivos (PDF ou imagem) de cada processo, ou edite o nome do processo.</p>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => abrirNovo('')}>
           <FiPlus /> Novo processo
@@ -525,7 +525,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
         ref={inputArquivo}
         className="sr-only"
         type="file"
-        accept="application/pdf,.pdf"
+        accept={ACCEPT_DOCUMENTO}
         onChange={aoEscolherArquivo}
         tabIndex={-1}
         aria-hidden="true"
@@ -625,20 +625,17 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
                   <li key={grupo.id} className="gd-processo">
                     <div className="gd-processo__titulo">
                       <span className="gd-cod numero">{grupo.codigo}</span>
+                      <BotaoEditar
+                        className="gd-processo__editar"
+                        rotulo={`Editar nome do processo ${grupo.titulo}`}
+                        dica="Editar nome do processo"
+                        onClick={() => setEditando(grupo)}
+                        disabled={Boolean(ocupado)}
+                      />
                       <span>
                         <strong>{grupo.descricao}</strong>
                         {termo && <small>{grupo.setor}</small>}
                       </span>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm btn-icone gd-processo__editar"
-                        onClick={() => setEditando(grupo)}
-                        disabled={Boolean(ocupado)}
-                        aria-label={`Editar nome do processo ${grupo.titulo}`}
-                        title="Editar nome do processo"
-                      >
-                        <FiEdit2 />
-                      </button>
                     </div>
 
                     {TIPOS_DOCUMENTO.map((t) => {
@@ -659,7 +656,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
                             className={`gd-adicionar${sobre ? ' arrastando' : ''}`}
                             onClick={() => escolherArquivo(acao)}
                             disabled={Boolean(ocupado) || !setorGrupoAtivo}
-                            title={setorGrupoAtivo ? `Escolher ou arrastar o PDF do ${t.nome}` : 'Setor desativado'}
+                            title={setorGrupoAtivo ? `Escolher ou arrastar o arquivo do ${t.nome}` : 'Setor desativado'}
                             {...propsSoltar(chave, acao, !ocupado && setorGrupoAtivo)}
                           >
                             {emAndamento ? (
@@ -669,7 +666,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
                             ) : (
                               <span className="gd-adicionar__texto">
                                 <span><FiPlus /> Adicionar {t.nome}</span>
-                                <small>ou arraste o PDF aqui</small>
+                                <small>ou arraste o arquivo aqui</small>
                               </span>
                             )}
                           </button>
@@ -681,7 +678,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
                           key={t.valor}
                           className={`gd-doc${alvoArraste === chave ? ' arrastando' : ''}`}
                           style={{ '--cor-tipo': COR_TIPO[t.valor] }}
-                          title="Arraste um PDF aqui para substituir"
+                          title="Arraste um PDF ou imagem aqui para substituir"
                           {...propsSoltar(chave, { tipo: 'substituir', documento, grupo }, !ocupado)}
                         >
                           <span className="gd-doc__info">
@@ -700,8 +697,8 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
                               className="btn btn-ghost btn-sm btn-icone"
                               onClick={() => escolherArquivo({ tipo: 'substituir', documento, grupo })}
                               disabled={Boolean(ocupado)}
-                              aria-label={`Substituir PDF do ${t.nome} de ${grupo.titulo}`}
-                              title="Substituir PDF"
+                              aria-label={`Substituir arquivo do ${t.nome} de ${grupo.titulo}`}
+                              title="Substituir arquivo"
                             >
                               <FiRefreshCw />
                             </button>
@@ -733,7 +730,7 @@ function DocumentsPanel({ documentos, loading, erro, onReload }) {
           </section>
 
           <p className="gd-ajuda">
-            Clique em &quot;Adicionar&quot; ou arraste o PDF até ele. Para substituir, arraste o novo PDF sobre o documento.
+            Clique em &quot;Adicionar&quot; ou arraste o arquivo (PDF ou imagem) até ele. Para substituir, arraste o novo arquivo sobre o documento.
             O número do processo é gerado automaticamente.
           </p>
         </div>
