@@ -912,7 +912,9 @@
 .gd-colunas,
 .gd-processo {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) repeat(3, 214px);
+  /* o nome do processo nunca fica com menos de 260px; os documentos
+     encolhem um pouco antes (até 160px) para dar espaço a ele */
+  grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(160px, 214px));
   gap: 12px;
   align-items: center;
 }
@@ -967,6 +969,9 @@
   font-size: 0.9rem;
   font-weight: 650;
   line-height: 1.3;
+  /* palavra longa (ex.: ENCERRAMENTO) quebra em vez de invadir a coluna ao lado */
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .gd-processo__titulo small {
@@ -1205,7 +1210,7 @@
 @media (max-width: 1280px) {
   .gd-colunas,
   .gd-processo {
-    grid-template-columns: minmax(0, 1fr) repeat(3, 200px);
+    grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(160px, 200px));
   }
 }
 
