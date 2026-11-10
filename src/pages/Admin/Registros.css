@@ -208,6 +208,12 @@
 
 .rg-recolhivel--etiquetas .rg-setor {
   line-height: 1.5;
+  /* nome de setor longo quebra dentro da própria etiqueta em vez de
+     invadir a coluna Tema (quebra entre palavras; no meio só se não couber) */
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  border-radius: 10px;
 }
 
 /* "Ver mais" da linha: pílula com olho */
